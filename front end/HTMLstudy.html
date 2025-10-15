@@ -1,0 +1,69 @@
+<!DOCTYPE html>                                     <!--コメント　ドキュメントの種類とバージョンを宣言-->
+<html lang="ja">
+<head>                                              <!--ドキュメントに関するメタ情報-->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">                    <!--これですべてのデバイスで応答性を持つようになる-->
+    <title>初めてのHTMLページ</title>                <!--ドキュメントのタイトルを設定-->
+    <style>
+        /* CSSをここに書くらしい */
+    </style>
+    <link rel="stylesheet" type="text/css" href="hogehoge.css">                               <!--これだと外部ファイルから読み込み-->
+</head>
+<body>
+    <header>                                        <!--ドキュメントやセクションのヘッダー定義-->
+        <h1>私の簡単なページ</h1>
+        <nav>                                       <!--ナビゲーションリンクのセットを定義-->
+            <ul>
+                <li><a href="#home">ホーム</a></li>
+            </ul>
+        </nav>
+    </header>                                       <!--ページの中身-->
+    <main>
+        <article id="home">                         <!--独立した自己完結型のコンテンツ定義　多分これでヘッダーで使うリンク作れてるのかな-->
+            <h2>ようこそ</h2>
+            <p>これはホームセクションです。</p>
+            <h1>私のウェブサイトへようこそ</h1>       <!--見出し、h1,h2,h3でどんどん小さくなる-->
+            <p>これは段落です。</p>                  <!--段落-->
+            <a href="https://qiita.com/birdwatcher/items/db81e4ef637d29d7d193">これを押すと最高のリンクに跳びます</a>
+            <a href="http://www.is.noda.tus.ac.jp/isws/project25/">プロジェクト実験リンク</a>   <!--リンク-->
+            <img src="null.png" alt="これは画像です">                                           <!--画像、.htmlと同じフォルダに画像が入ってると表示できた-->
+            <p>これは<strong>ネストされた</strong>要素です。</p>                                 <!--ネストってやつ、太字になった！-->
+            <p>
+            <input type="file" accept="image/*">    <!--ファイル選択をさせるやつ、これだと画像しか選べないんだって！ファイルのプレビュー表示はJavaScriptあればできるみたいな書き方-->
+            </p>
+            <p>
+                <form>
+                    <button type="submit">送信</button>                     <!--入力欄の情報をサーバーに送信-->
+                    <button type="reset">リセット</button>                  <!--form　の中の入力欄全リセット-->
+                    <button 
+                    type="button"
+                    name="like"
+                    value="true">好きな操作を加える</button>                 <!--エフェクト選択とか、これでやることになりそう!クリックでJavaScript動く-->
+                    <button type="button" disabled>無効化してます</button>
+                    <button 
+                    type="button"
+                    name="like"
+                    value="true"><img src="null.png" alt="これは画像です"></button>  <!--これで押せる画像の完成、エフェクトはこれで-->
+                    <canvas id="myCanvas" width="500" height="400"></canvas>        <!--Canvas APIで使う。この部分をJavaScriptで制御する-->
+                </form>
+            </p>
+        </article>
+    </main>
+    <footer>                                        <!--ドキュメントやセクションのフッター定義-->
+        <p>&copy; 2024 私の簡単なページ</p>
+    </footer>
+
+    <script>
+        //ここにJavaScript
+    </script>
+    <script src="hogehoge.js"></script>             <!--これだと外部ファイル読み込み-->
+</body>
+</html>
+
+
+<!--追加要素について-->
+<!--href属性    リンク先の定義
+    src属性     画像ソース
+    alt属性     代替テキスト-->
+
+<!--実行はエクスプローラーでファイルを開くだけ-->
