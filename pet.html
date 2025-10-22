@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ペットをおしゃれにしてみましょう</title>
+  <meta charset="UTF-8">
+  <style>
+    .canvas-and-button{
+        display:flex;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 40px;
+        margin-top: 20px;
+    }
+    .EffectButton{
+        display: grid;
+        grid-template-columns: repeat(2,70px);
+        grid-template-rows: repeat(8,70px);
+        gap:10px;
+        justify-content: flex-end;
+        margin-right:20px;
+    }
+
+    #ImageSpace{
+        background-color: lightpink;
+    }
+
+    .downloadbutton{
+        display:flex;
+        justify-content: center;
+    }
+  </style>
+</head>
+<body>
+<h1>ペットをおしゃれにしてみましょう</h1>
+<p><input type="file" accept="image/*" onchange="ImageImport(this.files)"></p>
+<div class="canvas-and-button">
+<canvas id="ImageSpace" width="850" height="520">
+    ここにペットの写真が表示されます
+</canvas>
+
+<script src="main.js"></script><!--ここはテスト用、本来はImageImport.jsって書く-->
+<div class="EffectButton">
+<button class="effect-button" type="button" name = "glasses" onclick = "EffectSelect(this.name)">サングラス</button>
+<button class="effect-button" type="button" name = "hat" onclick = "EffectSelect(this.name)">帽子</button>
+<button class="effect-button" type="button" name = "ribbon" onclick = "EffectSelect(this.name)">リボン</button>
+<button class="effect-button" type="button" name = "hart" onclick = "EffectSelect(this.name)">はーと</button>
+<button class="effect-button" type="button" name = "gantai" onclick = "EffectSelect(this.name)">眼帯</button>
+<button class="effect-button" type="button" name = "oukan" onclick = "EffectSelect(this.name)">王冠</button>
+<button class="effect-button" type="button" name = "rabbit" onclick = "EffectSelect(this.name)">うさ耳</button>
+<button class="effect-button" type="button" name = "star" onclick = "EffectSelect(this.name)">星</button>
+</div>
+</div>
+<div class="downloadbutton">
+<button class="download" type="button">保存</button>
+<div>
+</body>
+</html>
