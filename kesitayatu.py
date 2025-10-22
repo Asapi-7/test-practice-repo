@@ -35,8 +35,7 @@ STAMP_PLACEMENT_RULES = {
     }
 }
 
-# --- 4. データ形式の定義 (Pydanticモデル) ---
-# ★★★ 名前を StampRequestData に戻しました ★★★
+# --- 4. データ形式の定義 (Pydanticモデル) --
 class StampRequestData(BaseModel):
     upload_image_id: str
     stamp_id: str
