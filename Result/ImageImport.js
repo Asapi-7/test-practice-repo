@@ -3,7 +3,7 @@ function ImageImport(files){
     const reader = new FileReader();
     if (files.type.match("image.*")) {
 		reader.onload = (event) => { 
-            //web APIにデータを送って、返り値を受け取る
+            //web APIにデータを送って、返り値を受け取るようにする
 
 
             //描画箇所に保存した画像を描画する
