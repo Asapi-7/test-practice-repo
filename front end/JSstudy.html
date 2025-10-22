@@ -1,0 +1,125 @@
+<!DOCTYPE html>                                     <!--コメント　ドキュメントの種類とバージョンを宣言-->
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">                    <!--これですべてのデバイスで応答性を持つようになる-->
+    <title>JavaSc勉強用ページ</title>                <!--ドキュメントのタイトルを設定-->
+    <style>
+        /* CSSをここに書くらしい */
+    </style>
+</head>
+<body>
+    <!--ボタンを押すと、入力したテキストが太字になって表示される-->
+    <input id = "input1">
+    <button onclick="clicked();">ボタン</button>
+    <div id="output1"></div>
+    <script>
+        function clicked(){
+            const input = document.getElemontById("input1");
+            const output = document.getElemontById("output1");
+            output.innerHTML = <b>${input.value}</b>;
+        }
+    </script>
+
+    <!--Enter押すたんびに文字が増えて、入力内容をクリアする-->
+    <input id="input2">
+    <div id="output2"></div>
+    <script>
+	    const input = document.getElementById("input2");
+	    input.addEventListener("keydown", (event) => {          //(event)=>{}　は式の名前が無い関数、eventを引数に持つ(eventはなんかしら発生すると生成される物、クリックした座標とか持ってたりするかも)
+		    console.log(event);
+		    if (event.code === "Enter") {
+			    const output = document.getElementById("output2");
+			    output.innerHTML += `<b>${input.value}</b><br>`;
+			    input.value = "";
+		    }
+	    })
+    </script>
+
+    <!--ボタンを押すと音が鳴る-->
+    <button onclick="play();">play</button>
+    <script>
+	    function play() {
+		    const ctx = new AudioContext();     //Web Audio APIの中心的なインターフェース
+		    const oscillator = ctx.createOscillator();
+		    let current_time = ctx.currentTime;
+
+		    const freqAndTime = [[400, 1], [300, 2]];
+		    for (const [freq, time] of freqAndTime) {
+			    oscillator.frequency.setValueAtTime(freq, current_time);
+			    current_time += time;
+		    }
+
+		    oscillator.connect(ctx.destination);
+		    oscillator.start(ctx.currentTime);
+		    oscillator.stop(current_time);
+	    }
+	    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+    </script>
+
+    <!--選択したテキスト、画像、音楽、動画ファイルの読み込み-->
+    <input type="file" onChange="readFile(this.files);">
+    <div id="output3"></div>
+    <script>
+	    const output = document.getElementById("output3");
+	    function readFile(files) {
+		    if (files.length === 0) return;
+		    const file = files[0];
+		    console.log(file.type)
+		    const reader = new FileReader();        //FileReaderはWeb API
+		    if (file.type.match("text.*")) {
+			    reader.onload = (event) => { output.innerHTML = `<xmp>${event.target.result}</xmp>`; }
+			    reader.readAsText(file, "utf-8");
+		    } else if (file.type.match("image.*")) {
+			    reader.onload = (event) => { output.innerHTML = `<img src="${event.target.result}" width="500">`; }
+			    reader.readAsDataURL(file);
+		    } else if (file.type.match("audio.*")) {
+			    reader.onload = (event) => { output.innerHTML = `<audio controls src="${event.target.result}"></audio>`; }
+			    reader.readAsDataURL(file);
+		    } else if (file.type.match("video.*")) {
+			    reader.onload = (event) => { output.innerHTML = `<video controls src="${event.target.result}" width="500"></video>`; }
+			    reader.readAsDataURL(file);
+		    }
+	    }
+    </script>
+
+    <!--入力された文字をテキストとしてダウンロードする-->
+    <textarea id="input" cols="40" rows="20"></textarea>
+    <button onclick="clicked();">ダウンロード</button>
+    <script>
+	    function download(text, filename) {
+		    const blob = new Blob([text], { type: "text/plain" });       //バイナリファイルを扱う？　文字列からテキストファイルを生成
+		    const link = document.createElement("a");                    //リンクになるタグを作る
+		    link.href = URL.createObjectURL(blob);                       //中に入れるリンクを指定(生成したテキストファイル)
+		    link.download = filename;                                    //クリックするとダウンロードするよって教えてる
+		    link.click();                                                //クリックしてる(これでダウンロードができる)
+	    }
+	    function clicked() {
+		    const input = document.getElementById("input");
+		    download(input.value, "sample.txt");
+	    }
+    </script>
+
+    <!--Canvas APIのお勉強-->
+    <a href="https://ittrip.xyz/javascript/javascript-canvas-api-drawing">Canvas APIの神リンク</a>
+    <p>
+        <canvas id="myCamvas" width="500" height="400"></canvas>
+    </p>
+    <script>
+        const canvas = document.getElementById('myCanvas');
+        const context = canvas.getContext('2d');                //2D描画用のコンテキストを取得
+        const img = new Image();
+        img.src = 'null.png';                   //画像を指定
+        img.onload = function(){
+            context.drawImage(img, 50, 50, 500, 400);     //画像を描画(画像,X,Y,Width,height)
+        };
+        //drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)            一部を切り取って表示
+        //img.onload = function() {
+            //context.save();
+            //context.translate(400, 300);                      回転の基点を設定
+            //context.rotate(Math.PI / 4);                      45度回転
+            //context.drawImage(img, -50, -50, 100, 100);       中心を基点に画像を描画
+            //context.restore();
+        //};
+    </script>
+</body>

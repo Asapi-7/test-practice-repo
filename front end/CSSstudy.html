@@ -1,0 +1,24 @@
+<!DOCTYPE html>                                     <!--コメント　ドキュメントの種類とバージョンを宣言-->
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">                    <!--これですべてのデバイスで応答性を持つようになる-->
+    <title>JavaSc勉強用ページ</title>                <!--ドキュメントのタイトルを設定-->
+    <style>
+        /* CSSをここに書くらしい */
+        h1, h2 {                        /*タグごとに設定する*/
+    	    color: blue;
+	        background-color: yellow;
+        }
+        .hogehoge {                     /*class="hogehoge"ってやるとこの設定が適用される　.=>#にすると指定idになる*/
+    	    padding: 10px;              /*要素外部に10pxの余白*/
+	        margin: 5px;                /*要素内部に5pxの余白*/
+        }
+    </style>
+</head>
+<body>
+    <h1>これはh1タグです</h1>
+    <h2>これはh2タグです</h2>
+    <button class="hogehoge">ほげってるボタン</button>
+    <button>ほげってないボタン</button>
+</body>
