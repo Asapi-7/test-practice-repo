@@ -1,7 +1,7 @@
-function ImageImport(file){
-    if (file.length === 0) return;
+function ImageImport(files){
+    if (files.length === 0) return;
     const reader = new FileReader();
-    if (file.type.match("image.*")) {
+    if (files.type.match("image.*")) {
 		reader.onload = (event) => { 
             //web APIにデータを送って、返り値を受け取る
 
@@ -14,6 +14,6 @@ function ImageImport(file){
             sessionStorage.setItem("Img", JSON.stringify(Img));         //画像を他の関数でも使えるよう保存しておく
             context.drawImage(Img, 50, 50, 500, 400);
         }
-        reader.readAsDataURL(file);                                     //これに成功するとreader.onloadが動き出す
+        reader.readAsDataURL(files);                                     //これに成功するとreader.onloadが動き出す
 	}
 }
