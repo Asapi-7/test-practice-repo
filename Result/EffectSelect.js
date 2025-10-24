@@ -27,6 +27,7 @@ function EffectSelect(effectName){
         stamp_id: effectName
     }
     const response = requestEffect(userRequest);
+    const result = json.loads(response);
     console.log("エフェクト画像もらえた");
     
     const ImageSpace = document.getElementById('ImageSpace');
@@ -34,13 +35,13 @@ function EffectSelect(effectName){
     const Img = new Image();
     Img.src = JSON.parse(sessionStorage.getItem("Img"));
 
-    Img.Onload = () => {
+    Img.onload = () => {
         context.clearRect(0,0,ImageSpace.clientWidth,ImageSpace.clientHeight);
         const scale = canvas.width/Img.width;
         //const effectImg = response.
-        const effectX = response.x;
-        const effectY = response.y;
-        const effectScale = response.scale;
+        const effectX = result["x"];
+        const effectY = result["y"];
+        const effectScale = result["scale"];
         context.drawImage(Img, 0, 0, Img.width*scale, Img.height*scale);
         //context.drawImage(effectImg, effectX, effectY, effectImg.width*effectScale, effectImg.height*effectScale);エフェクトこれ
     }

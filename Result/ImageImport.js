@@ -29,7 +29,8 @@ function ImageImport(files){
         file: this.file
       }
       const response = sendUserImage(newUserImage);
-      const userID = response.session_id;
+      const result = json.loads(response);
+      const userID = result["session_id"];
       sessionStorage.setItem("ID", userID);
       console.log(userID);
 
