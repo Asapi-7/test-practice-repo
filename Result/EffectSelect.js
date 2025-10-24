@@ -4,9 +4,14 @@ function EffectSelect(effectName){
     
     const ImageSpace = document.getElementById('ImageSpace');
     const context = ImageSpace.getContext('2d');                //2D描画用のコンテキストを取得
-    let Img = JSON.parse(sessionStorage.getItem("Img"));
-    context.clearRect(0,0,ImageSpace.clientWidth,ImageSpace.clientHeight);
-    context.drawImage(Img, 50, 50, 500, 400);
-    sessionStorage.setItem("select", JSON.stringify(effectName));
-    //context.drawImage(Img, 50, 50, 500, 400);エフェクトこれ
+    const Img = new Image();
+    Img.src = JSON.parse(sessionStorage.getItem("Img"));
+
+    Img,Onload = () => {
+        context.clearRect(0,0,ImageSpace.clientWidth,ImageSpace.clientHeight);
+        const scale = canvas.width/Img.width;
+        context.drawImage(Img, 0, 0, Img.width*scale, Img.height*scale);
+        //context.drawImage(Img, 50, 50, 500, 400);エフェクトこれ
+        sessionStorage.setItem("select", JSON.stringify(effectName));
+    }
 }
