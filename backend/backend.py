@@ -1,6 +1,10 @@
 import os
 import uuid
 import shutil
+
+#書き加えた
+from typing import Dict, List
+#
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
@@ -13,6 +17,19 @@ app = FastAPI()
 # --- 2. ディレクトリ設定 ---
 TEMP_DIR = "temp"
 os.makedirs(TEMP_DIR, exist_ok=True)
+
+# フロントエンドの静的ファイルを置く場所
+# 例: pet.html, EffectSelect.js, ImageDownload.js, ImageImport.js
+WWW_DIR = "www"
+os.makedirs(WWW_DIR, exist_ok=True)
+
+# /static 配下で www/ のファイルを公開
+# -> http://localhost:8000/static/pet.html で pet.html が見える
+# -> http://localhost:8000/static/EffectSelect.js でJSが見える
+app.mount("/static", StaticFiles(directory=WWW_DIR), name="static")
+
+# =========================================================
+
 
 # --- 3. ランドマークを保存するための仮のデータベース ---
 image_landmark_storage: Dict[str, Dict] = {}
@@ -33,6 +50,15 @@ STAMP_PLACEMENT_RULES = {
         "type": "nose",
         "required_landmarks": ["nose"]
     }
+}
+
+# スタンプごとの「基準となる横幅(px)」
+# この横幅を1.0倍として、顔に合わせてスケールを計算する
+STAMP_BASE_WIDTHS = {
+    "glasses.png": 100,
+    "party_hat.png": 120,
+    "clown_nose.png": 40,
+    # 必要に応じて追加
 }
 
 # --- 4. データ形式の定義 (Pydanticモデル) --
@@ -98,7 +124,7 @@ async def get_stamp_info(data: StampRequestData):
     if not stamp_config:
         nose_landmark = landmarks.get("nose", {"x": 100, "y": 100})
         return JSONResponse(content={
-            "stamp_id": data.stamp_id, "x": nose_landmark["x"], "y": nose_landmark["y"], "size": 100
+            "stamp_id": data.stamp_id, "x": nose_landmark["x"], "y": nose_landmark["y"], "scale": scale
         })
 
     stamp_type = stamp_config["type"]
@@ -107,28 +133,89 @@ async def get_stamp_info(data: StampRequestData):
         if required not in landmarks:
             raise HTTPException(status_code=400, detail=f"Required landmark '{required}' not found for this stamp.")
 
-    x, y, size = 0, 0, 100
+    x, y, needed_width_px = 0, 0, 100
 
     if stamp_type == "glasses":
         left_eye_landmark = landmarks["left_eye"]
         right_eye_landmark = landmarks["right_eye"]
         x = (left_eye_landmark["x"] + right_eye_landmark["x"]) // 2
         y = (left_eye_landmark["y"] + right_eye_landmark["y"]) // 2
-        size = abs(right_eye_landmark["x"] - left_eye_landmark["x"]) + 20
+        eye_dist = abs(re["x"] - le["x"])
+        needed_width_px = eye_dist + 20  # 目の距離 + ちょい余白
     
     elif stamp_type == "hat":
         forehead_landmark = landmarks["forehead"]
         x, y = forehead_landmark["x"], forehead_landmark["y"]
-        size = abs(landmarks["right_eye"]["x"] - landmarks["left_eye"]["x"]) * 2
+        eye_dist = abs(landmarks["right_eye"]["x"] - landmarks["left_eye"]["x"])
+        needed_width_px = eye_dist * 2  # 帽子は顔幅よりちょい大きく
 
     elif stamp_type == "nose":
         nose_landmark = landmarks["nose"]
         x, y = nose_landmark["x"], nose_landmark["y"]
-        size = 50
-        
+        needed_width_px = 50  # 鼻スタンプは固定気味
+    # 基準幅から倍率を計算
+    base_width_px = STAMP_BASE_WIDTHS.get(data.stamp_id, 100)
+    if base_width_px <= 0:
+        base_width_px = 100
+    scale = needed_width_px / base_width_px
+    
     return JSONResponse(content={
         "stamp_id": data.stamp_id,
         "x": x,
         "y": y,
-        "size": size
+        # フロント側でスタンプ画像を何倍にすればいいか
+        "scale": scale,
+         # フロントが背景として描画する用
+        "base_image_url": f"/work/{data.upload_image_id}/original.jpg"
+    })
+    # ======加えたよ===================================================
+# 10. フロントファイルをアップロードするエンドポイント
+#
+# フロント班はここに pet.html / JSファイル をPOSTするだけでいい。
+# そうするとサーバー側の www/ に保存される。
+#
+# curl例:
+# curl -X POST "http://localhost:8000/upload_static_files" \
+#   -F "files=@pet.html" \
+#   -F "files=@EffectSelect.js" \
+#   -F "files=@ImageDownload.js" \
+#   -F "files=@ImageImport.js"
+#
+# 成功後は:
+#   http://localhost:8000/static/pet.html
+# でブラウザ表示できるようになる。
+# =========================================================
+@app.post("/upload_static_files", tags=["0. Frontend Static Upload"])
+async def upload_static_files(files: List[UploadFile] = File(...)):
+    saved_urls: List[str] = []
+
+    for uploaded in files:
+        # ファイル名だけ取り出す（"C:\\path\\to\\pet.html" みたいなのを防ぐ）
+        filename = os.path.basename(uploaded.filename)
+
+        if not filename:
+            raise HTTPException(status_code=400, detail="File has no name")
+
+        # 拡張子チェック：.html / .js 以外は拒否（安全のため）
+        _, ext = os.path.splitext(filename.lower())
+        if ext not in [".html", ".htm", ".js"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Extension not allowed: {ext}"
+            )
+
+        # 保存先は www/<filename>
+        dest_path = os.path.join(WWW_DIR, filename)
+
+        # アップロード内容を保存
+        with open(dest_path, "wb") as out_file:
+            shutil.copyfileobj(uploaded.file, out_file)
+
+        # 後で確認しやすいように、公開URLも返す
+        saved_urls.append(f"/static/{filename}")
+
+    return JSONResponse(content={
+        "status": "ok",
+        "uploaded_files": saved_urls,
+        "hint": "ブラウザで /static/pet.html を開いて動作確認してください。"
     })
