@@ -7,11 +7,13 @@ function ImageDownload(){
 			link.href = URL.createObjectURL(blob);          //中に入れるリンクを指定(生成したテキストファイル)
 			link.download = "cuty_animal.png";              //クリックするとダウンロードするよって教えてる
 			link.click();
-			URL.revokeObjectURL(url);						//URLを解放する
+			URL.revokeObjectURL(link.href);					//URLを解放する
 			console.log("ダウンロードできてる？");
 		}else{
 			console.error("ダウンロード失敗");
 		}
-	}, image/png)
+	}, 'image/png')
 	console.log("ya");
 }
+
+//strage: ID, Img, effect
