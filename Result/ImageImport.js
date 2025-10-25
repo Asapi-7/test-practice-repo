@@ -3,16 +3,13 @@ function ImageImport(files){
 	const file = files[0];              //もらうデータは必ずファイル群になってるから、先頭だけ抜き出して画像のみにする
   const reader = new FileReader();
   if (file.type.match("image.*")) {
-	  reader.onload = (event) => { 
+	  reader.onload = async (event) => { 
       //web APIにデータを送って、返り値を受け取るようにする
-      async function sendUserImage(newUserImage){                //asyncは内部に非同期処理が存在することを表す
+      async function sendUserImage(newUserImage){             //asyncは内部に非同期処理が存在することを表す
         try{
           const response = await fetch('/upload_and_detect',{ //awaitは処理が終わるまで待機をお願いする
             method: 'POST',                                   //これはPOSTメソッドです
-            headers: {                                        //送るデータはこの形状です
-              'Content-Type': 'multipart/form-data'
-            },
-            body: newUserImage                                   //実際に送るデータです
+            body: newUserImage                                //実際に送るデータです
           });
           if(!response.ok){
             throw new Error('返答が芳しくなかった');
@@ -25,15 +22,13 @@ function ImageImport(files){
         }
       }
     
-      const newUserImage = {
-        file: this.file
+      const newUserImage = {                              //送る内容を封筒に収める
+        file: files
       }
-      const response = sendUserImage(newUserImage);
-      const result = json.loads(response);
+      const result = await sendUserImage(newUserImage);   //手紙を送って、返信を格納できるまで少し待つ
       const userID = result["session_id"];
       sessionStorage.setItem("ID", userID);
       console.log(userID);
-
 
       //描画箇所に保存した画像を描画する
       const ImageSpace = document.getElementById('ImageSpace');   //描画領域となるcanvasを指定
@@ -41,7 +36,7 @@ function ImageImport(files){
       const Img = new Image();
       Img.src = event.target.result;                              //画像読み込み開始
 
-      Img.onload = () => {
+      Img.onload = () => {                                        //画像読み込み終わった後の処理
         const scale = ImageSpace.width/Img.width;
         context.drawImage(Img, 0, 0, Img.width*scale, Img.height*scale);
         console.log("deteru?");
@@ -51,3 +46,5 @@ function ImageImport(files){
     reader.readAsDataURL(file);                                     //これに成功するとreader.onloadが動き出す
 	}
 }
+
+//strage: ID, Img
