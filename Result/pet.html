@@ -42,7 +42,9 @@
 <div class="EffectButton">
 <button class="effect-button" type="button" name = "glasses" onclick = "EffectSelect(this.name)">サングラス</button>
 <button class="effect-button" type="button" name = "hat" onclick = "EffectSelect(this.name)">帽子</button>
-<button class="effect-button" type="button" name = "ribbon" onclick = "EffectSelect(this.name)">リボン</button>
+<button class="effect-button" type="button" name = "ribbon" onclick = "EffectSelect(this.name)">
+    <img src="ribbon.png" alt="Ribbon Image" style="height: 100%;">
+</button>
 <button class="effect-button" type="button" name = "hart" onclick = "EffectSelect(this.name)">はーと</button>
 <button class="effect-button" type="button" name = "gantai" onclick = "EffectSelect(this.name)">眼帯</button>
 <button class="effect-button" type="button" name = "oukan" onclick = "EffectSelect(this.name)">王冠</button>
@@ -51,7 +53,7 @@
 </div>
 </div>
 <div class="downloadbutton">
-<button class="download" type="button">保存</button>
+<button class="download" type="button" onclick="ImageDownload()">保存</button>
 <div>
 </body>
 </html>
