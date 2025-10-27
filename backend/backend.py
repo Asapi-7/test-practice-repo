@@ -7,6 +7,9 @@ from typing import Dict, List
 #
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
+#勝手に足しました:みうら
+from fastapi.staticfiles import StaticFiles
+#
 from pydantic import BaseModel
 from typing import Dict
 from PIL import Image
@@ -140,7 +143,7 @@ async def get_stamp_info(data: StampRequestData):
         right_eye_landmark = landmarks["right_eye"]
         x = (left_eye_landmark["x"] + right_eye_landmark["x"]) // 2
         y = (left_eye_landmark["y"] + right_eye_landmark["y"]) // 2
-        eye_dist = abs(re["x"] - le["x"])
+        eye_dist = abs(right_eye_landmark["x"] - left_eye_landmark["x"])
         needed_width_px = eye_dist + 20  # 目の距離 + ちょい余白
     
     elif stamp_type == "hat":
