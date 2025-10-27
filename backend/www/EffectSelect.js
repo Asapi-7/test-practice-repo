@@ -3,7 +3,7 @@ async function EffectSelect(effectName){
     //画像インポート時にバックエンドから返される内容に応じて、フロントで行う処理の内容が変動
     async function requestEffect(userRequest){                //asyncは内部に非同期処理が存在することを表す
         try{
-            const response = await fetch('/get_stamp_info',{ //awaitは処理が終わるまで待機をお願いする
+            const response = await fetch('/get_stamp_data',{ //awaitは処理が終わるまで待機をお願いする
                 method: 'POST',                           //これはPOSTメソッドです
                 headers: {                                //送るデータはこの形状です
                     'Content-Type': 'application/json'
