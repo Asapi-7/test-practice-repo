@@ -39,12 +39,12 @@ async function EffectSelect(effectName){
         context.clearRect(0,0,ImageSpace.clientWidth,ImageSpace.clientHeight);  //一回全消し
         const scale = ImageSpace.width/Img.width;
         const effectImg = new Image();
-        effectImg.src = result["base_image_url"];
+        effectImg.src = result["stamp_id"];
         const effectX = result["x"];
         const effectY = result["y"];
         const effectScale = result["scale"];
         context.drawImage(Img, 0, 0, Img.width*scale, Img.height*scale);
-        context.drawImage(effectImg, effectX, effectY, effectImg.width*effectScale, effectImg.height*effectScale);エフェクトこれ
+        context.drawImage(effectImg, effectX, effectY, effectImg.width*effectScale, effectImg.height*effectScale);
     }
 }
 

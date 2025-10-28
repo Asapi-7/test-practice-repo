@@ -3,7 +3,7 @@ async function EffectSelect(effectName){
     //画像インポート時にバックエンドから返される内容に応じて、フロントで行う処理の内容が変動
     async function requestEffect(userRequest){                //asyncは内部に非同期処理が存在することを表す
         try{
-            const response = await fetch('/get_stamp_data',{ //awaitは処理が終わるまで待機をお願いする
+            const response = await fetch('/get_stamp_info',{ //awaitは処理が終わるまで待機をお願いする
                 method: 'POST',                           //これはPOSTメソッドです
                 headers: {                                //送るデータはこの形状です
                     'Content-Type': 'application/json'
@@ -39,12 +39,12 @@ async function EffectSelect(effectName){
         context.clearRect(0,0,ImageSpace.clientWidth,ImageSpace.clientHeight);  //一回全消し
         const scale = ImageSpace.width/Img.width;
         const effectImg = new Image();
-        effectImg.src = result["base_image_url"];
+        effectImg.src = result["stamp_id"];
         const effectX = result["x"];
         const effectY = result["y"];
         const effectScale = result["scale"];
         context.drawImage(Img, 0, 0, Img.width*scale, Img.height*scale);
-        context.drawImage(effectImg, effectX, effectY, effectImg.width*effectScale, effectImg.height*effectScale);エフェクトこれ
+        context.drawImage(effectImg, effectX, effectY, effectImg.width*effectScale, effectImg.height*effectScale);
     }
 }
 
