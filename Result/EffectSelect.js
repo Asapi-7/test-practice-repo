@@ -39,7 +39,7 @@ async function EffectSelect(effectName){
         context.clearRect(0,0,ImageSpace.clientWidth,ImageSpace.clientHeight);  //一回全消し
         const scale = ImageSpace.width/Img.width;
         const effectImg = new Image();
-        effectImg.src = result["stamp_id"];
+        effectImg.src = result["base_image_url"];
         const effectX = result["x"];
         const effectY = result["y"];
         const effectScale = result["scale"];
