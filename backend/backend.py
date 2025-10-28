@@ -103,28 +103,7 @@ async def upload_and_detect_landmarks(file: UploadFile = File(...)):
     image_landmark_storage[upload_image_id] = landmarks
     
     return JSONResponse(content={"upload_image_id": upload_image_id})
-# =====10月２８日西本====================================================
-@app.get("/get_base_image_file", tags=["2. Base Image Binary"])
-async def get_base_image_file(upload_image_id: str = Query(..., description="upload_and_detectで返されたID")):
-    """
-    フロントが元画像(ユーザーがアップした写真)の実体をほしいときに呼ぶ。
-    返り値は画像ファイルそのもの (image/jpeg)。
-    """
-    user_dir = os.path.join(TEMP_DIR, upload_image_id)
-    original_image_path = os.path.join(user_dir, "original.jpg")
 
-    if not os.path.exists(original_image_path):
-        raise HTTPException(status_code=404, detail="Original image not found.")
-
-    # FileResponse は画像バイナリを返せる
-    # Content-Typeはjpg想定だが、必要なら実際の拡張子で判定してもOK
-    return FileResponse(
-        path=original_image_path,
-        media_type="image/jpeg",
-        filename="original.jpg"
-    )
-
-# =========================================================
 # #################################################
 # ## 機能②：スタンプ情報の取得 (ロジック変更)
 # #################################################
@@ -142,13 +121,24 @@ async def get_stamp_info(data: StampRequestData):
     landmarks = image_landmark_storage.get(data.upload_image_id)
     if not landmarks:
         raise HTTPException(status_code=404, detail="Upload Image ID not found.")
+# 2) スタンプ画像ファイルを www/<stamp_id> から読む
+    stamp_path = os.path.join(WWW_DIR, data.stamp_id)
+    if not os.path.exists(stamp_path):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Stamp asset '{data.stamp_id}' not found on server."
+        )
+
+    # Base64化して、フロントが直接<img src="...">に使える形にする
+    stamp_image_b64 = encode_image_to_base64(stamp_path)
+
 
     stamp_config = STAMP_PLACEMENT_RULES.get(data.stamp_id)
 
     if not stamp_config:
         nose_landmark = landmarks.get("nose", {"x": 100, "y": 100})
         return JSONResponse(content={
-            "stamp_id": data.stamp_id, "x": nose_landmark["x"], "y": nose_landmark["y"], "scale": 1
+            "stamp_id": data.stamp_id, "x": nose_landmark["x"], "y": nose_landmark["y"], "scale": scale
         })
 
     stamp_type = stamp_config["type"]
@@ -189,9 +179,10 @@ async def get_stamp_info(data: StampRequestData):
         "y": y,
         # フロント側でスタンプ画像を何倍にすればいいか
         "scale": scale,
-         # フロントが背景として描画する用
-        "base_image_url": f"/work/{data.upload_image_id}/original.jpg"
-    })
+        "stamp_image": stamp_image_b64
+        
+    }
+)
     # ======加えたよ===================================================
 # 10. フロントファイルをアップロードするエンドポイント
 #
@@ -239,8 +230,8 @@ async def upload_static_files(files: List[UploadFile] = File(...)):
 
         # 後で確認しやすいように、公開URLも返す
         saved_urls.append(f"/static/{filename}")
-
-        "status": "ok",
-        "uploaded_files": saved_urls,
-        "hint": "ブラウザで /static/pet.html を開いて動作確認してください。"
-    })
+        return JSONResponse(content={
+            "status": "ok",
+            "uploaded_files": saved_urls,
+            "hint": "ブラウザで /static/pet.html を開いて動作確認してください。"
+        })
