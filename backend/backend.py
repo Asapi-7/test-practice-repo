@@ -103,7 +103,28 @@ async def upload_and_detect_landmarks(file: UploadFile = File(...)):
     image_landmark_storage[upload_image_id] = landmarks
     
     return JSONResponse(content={"upload_image_id": upload_image_id})
+# =====10月２８日西本====================================================
+@app.get("/get_base_image_file", tags=["2. Base Image Binary"])
+async def get_base_image_file(upload_image_id: str = Query(..., description="upload_and_detectで返されたID")):
+    """
+    フロントが元画像(ユーザーがアップした写真)の実体をほしいときに呼ぶ。
+    返り値は画像ファイルそのもの (image/jpeg)。
+    """
+    user_dir = os.path.join(TEMP_DIR, upload_image_id)
+    original_image_path = os.path.join(user_dir, "original.jpg")
 
+    if not os.path.exists(original_image_path):
+        raise HTTPException(status_code=404, detail="Original image not found.")
+
+    # FileResponse は画像バイナリを返せる
+    # Content-Typeはjpg想定だが、必要なら実際の拡張子で判定してもOK
+    return FileResponse(
+        path=original_image_path,
+        media_type="image/jpeg",
+        filename="original.jpg"
+    )
+
+# =========================================================
 # #################################################
 # ## 機能②：スタンプ情報の取得 (ロジック変更)
 # #################################################
@@ -190,6 +211,8 @@ async def get_stamp_info(data: StampRequestData):
 # =========================================================
 @app.post("/upload_static_files", tags=["0. Frontend Static Upload"])
 async def upload_static_files(files: List[UploadFile] = File(...)):
+    
+    
     saved_urls: List[str] = []
 
     for uploaded in files:
@@ -201,7 +224,7 @@ async def upload_static_files(files: List[UploadFile] = File(...)):
 
         # 拡張子チェック：.html / .js 以外は拒否（安全のため）
         _, ext = os.path.splitext(filename.lower())
-        if ext not in [".html", ".htm", ".js"]:
+        if ext not in [".html", ".htm", ".js", ".css", ".png", ".jpg", ".jpeg", ".gif"]:
             raise HTTPException(
                 status_code=400,
                 detail=f"Extension not allowed: {ext}"
@@ -217,7 +240,6 @@ async def upload_static_files(files: List[UploadFile] = File(...)):
         # 後で確認しやすいように、公開URLも返す
         saved_urls.append(f"/static/{filename}")
 
-    return JSONResponse(content={
         "status": "ok",
         "uploaded_files": saved_urls,
         "hint": "ブラウザで /static/pet.html を開いて動作確認してください。"
