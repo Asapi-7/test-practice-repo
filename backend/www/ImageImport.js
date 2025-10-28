@@ -25,7 +25,7 @@ function ImageImport(files){
       }
     
       const result = await sendUserImage(file);   //手紙を送って、返信を格納できるまで少し待つ
-      const userID = result["session_id"];
+      const userID = result["upload_image_id"];
       sessionStorage.setItem("ID", userID);
       console.log(userID);
 

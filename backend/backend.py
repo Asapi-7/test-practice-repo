@@ -127,7 +127,7 @@ async def get_stamp_info(data: StampRequestData):
     if not stamp_config:
         nose_landmark = landmarks.get("nose", {"x": 100, "y": 100})
         return JSONResponse(content={
-            "stamp_id": data.stamp_id, "x": nose_landmark["x"], "y": nose_landmark["y"], "scale": scale
+            "stamp_id": data.stamp_id, "x": nose_landmark["x"], "y": nose_landmark["y"], "scale": 1
         })
 
     stamp_type = stamp_config["type"]
