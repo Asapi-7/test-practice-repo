@@ -32,9 +32,10 @@ function ImageImport(files){
       //描画箇所に保存した画像を描画する
       const ImageSpace = document.getElementById('ImageSpace');   //描画領域となるcanvasを指定
       const context = ImageSpace.getContext('2d');                //2D描画用のコンテキストを取得
-      ImageSpace.setAttribute('width', '650');                //2D描画用のコンテキストを取得
+      ImageSpace.setAttribute('width', '650');                    //画像再インポート時、canvasサイズを元の大きさに戻したり一回全消ししたり
       ImageSpace.setAttribute('height', '650');
-      const Img = new Image();
+      context.clearRect(0,0,ImageSpace.clientWidth,ImageSpace.clientHeight);
+      const Img = new Image();                                    //ここに画像が入る
       Img.src = event.target.result;                              //画像読み込み開始
 
       Img.onload = () => {                                        //画像読み込み終わった後の処理
