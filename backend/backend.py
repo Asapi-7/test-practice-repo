@@ -50,15 +50,15 @@ image_landmark_storage: Dict[str, Dict] = {}
 # ## ★★★ スタンプごとの設定データ（構成体） ★★★
 # #################################################
 STAMP_PLACEMENT_RULES = {
-    "glasses.png": {
+    "glasses_touka.png": {
         "type": "glasses",
         "required_landmarks": ["left_eye", "right_eye"]
     },
-    "party_hat.png": {
+    "ribbon.png": {
         "type": "hat",
         "required_landmarks": ["forehead", "left_eye", "right_eye"]
     },
-    "clown_nose.png": {
+    "red_nose.png": {
         "type": "nose",
         "required_landmarks": ["nose"]
     }
@@ -67,9 +67,9 @@ STAMP_PLACEMENT_RULES = {
 # スタンプごとの「基準となる横幅(px)」
 # この横幅を1.0倍として、顔に合わせてスケールを計算する
 STAMP_BASE_WIDTHS = {
-    "glasses.png": 100,
-    "party_hat.png": 120,
-    "clown_nose.png": 40,
+    "glasses_touka.png": 100,
+    "ribbon.png": 120,
+    "red_nose.png": 40,
     # 必要に応じて追加
 }
 
@@ -84,10 +84,10 @@ def detect_landmarks_dummy(image_path: str) -> Dict:
         width, height = img.size
         center_x, center_y = width // 2, height // 2
         landmarks = {
-            "left_eye": {"x": center_x - 50, "y": center_y - 30},
-            "right_eye": {"x": center_x + 50, "y": center_y - 30},
-            "nose": {"x": center_x, "y": center_y + 10},
-            "forehead": {"x": center_x, "y": center_y - 80}
+            "left_eye": {"x": 150, "y": 230},
+            "right_eye": {"x": 250, "y": 270},
+            "nose": {"x": 200, "y": 210},
+            "forehead": {"x": 200, "y": 120}
         }
         return landmarks
 
