@@ -47,7 +47,7 @@ app.mount("/static", StaticFiles(directory=WWW_DIR), name="static")
 image_landmark_storage: Dict[str, Dict] = {}
 
 # #################################################
-# ## ★★★ スタンプごとの設定データ（構成体） ★★★
+# ## ★★★ スタンプごとの設定データ（辞書型） ★★★
 # #################################################
 STAMP_PLACEMENT_RULES = {
     "glasses.png": {
