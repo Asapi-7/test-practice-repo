@@ -166,16 +166,60 @@ async def get_stamp_info(data: StampRequestData):
         eye_dist = abs(right_eye_landmark["x"] - left_eye_landmark["x"])
         needed_width_px = eye_dist + 20  # 目の距離 + ちょい余白
     
+    elif stamp_type == "star":
+        left_eye_landmark = landmarks["left_eye"]
+        right_eye_landmark = landmarks["right_eye"]
+        x = (left_eye_landmark["x"] + right_eye_landmark["x"]) // 2
+        y = (left_eye_landmark["y"] + right_eye_landmark["y"]) // 2
+        eye_dist = abs(right_eye_landmark["x"] - left_eye_landmark["x"])
+        needed_width_px = eye_dist + 20
+    
+    elif stamp_type == "gantai":
+        left_eye_landmark = landmarks["left_eye"]
+        right_eye_landmark = landmarks["right_eye"]
+        x = (left_eye_landmark["x"] + right_eye_landmark["x"]) // 2
+        y = (left_eye_landmark["y"] + right_eye_landmark["y"]) // 2
+        eye_dist = abs(right_eye_landmark["x"] - left_eye_landmark["x"])
+        needed_width_px = eye_dist + 20
+    
+    elif stamp_type == "hart":
+        left_eye_landmark = landmarks["left_eye"]
+        right_eye_landmark = landmarks["right_eye"]
+        x = (left_eye_landmark["x"] + right_eye_landmark["x"]) // 2
+        y = (left_eye_landmark["y"] + right_eye_landmark["y"]) // 2
+        eye_dist = abs(right_eye_landmark["x"] - left_eye_landmark["x"])
+        needed_width_px = eye_dist + 20
+
     elif stamp_type == "hat":
         forehead_landmark = landmarks["forehead"]
         x, y = forehead_landmark["x"], forehead_landmark["y"]
         eye_dist = abs(landmarks["right_eye"]["x"] - landmarks["left_eye"]["x"])
         needed_width_px = eye_dist * 2  # 帽子は顔幅よりちょい大きく
 
-    elif stamp_type == "nose":
+    elif stamp_type == "red_nose":
         nose_landmark = landmarks["nose"]
         x, y = nose_landmark["x"], nose_landmark["y"]
         needed_width_px = 50  # 鼻スタンプは固定気味
+    
+    elif stamp_type == "oukan":
+        forehead_landmark = landmarks["forehead"]
+        x, y = forehead_landmark["x"], forehead_landmark["y"]
+        eye_dist = abs(landmarks["right_eye"]["x"] - landmarks["left_eye"]["x"])
+        needed_width_px = eye_dist * 2
+
+    elif stamp_type == "ribbon":
+        forehead_landmark = landmarks["forehead"]
+        x, y = forehead_landmark["x"], forehead_landmark["y"]
+        eye_dist = abs(landmarks["right_eye"]["x"] - landmarks["left_eye"]["x"])
+        needed_width_px = eye_dist * 2
+        
+    elif stamp_type == "rabbit":
+        forehead_landmark = landmarks["forehead"]
+        x, y = forehead_landmark["x"], forehead_landmark["y"]
+        eye_dist = abs(landmarks["right_eye"]["x"] - landmarks["left_eye"]["x"])
+        needed_width_px = eye_dist * 2
+
+
     # 基準幅から倍率を計算
     base_width_px = STAMP_BASE_WIDTHS.get(data.stamp_id, 100)
     if base_width_px <= 0:
