@@ -50,7 +50,7 @@ image_landmark_storage: Dict[str, Dict] = {}
 # ## ★★★ スタンプごとの設定データ（構成体） ★★★
 # #################################################
 STAMP_PLACEMENT_RULES = {
-    "glasses_touka.png": {
+    "glasses.png": {
         "type": "glasses",
         "required_landmarks": ["left_eye", "right_eye"]
     },
@@ -67,7 +67,7 @@ STAMP_PLACEMENT_RULES = {
 # スタンプごとの「基準となる横幅(px)」
 # この横幅を1.0倍として、顔に合わせてスケールを計算する
 STAMP_BASE_WIDTHS = {
-    "glasses_touka.png": 100,
+    "glasses.png": 100,
     "ribbon.png": 120,
     "red_nose.png": 40,
     # 必要に応じて追加
