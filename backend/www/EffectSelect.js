@@ -8,7 +8,7 @@ async function EffectSelect(effectName){
                 headers: {                                //送るデータはこの形状です
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(userRequest)                         //実際に送るデータです
+                body: JSON.stringify(userRequest)         //実際に送るデータです
             });
             if(!response.ok){
                 throw new Error('返答が芳しくなかった');
@@ -23,7 +23,7 @@ async function EffectSelect(effectName){
 
     sessionStorage.setItem("effect",effectName);
     const userID = sessionStorage.getItem("ID");
-    const userRequest = {                           //送る内容を封筒に収める
+    const userRequest = {                               //送る内容を封筒に収める
         upload_image_id: userID,
         stamp_id: effectName
     }
