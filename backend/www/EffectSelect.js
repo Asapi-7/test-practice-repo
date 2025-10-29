@@ -8,7 +8,7 @@ async function EffectSelect(effectName){
                 headers: {                                //送るデータはこの形状です
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(userRequest)                         //実際に送るデータです
+                body: JSON.stringify(userRequest)         //実際に送るデータです
             });
             if(!response.ok){
                 throw new Error('返答が芳しくなかった');
@@ -23,7 +23,7 @@ async function EffectSelect(effectName){
 
     sessionStorage.setItem("effect",effectName);
     const userID = sessionStorage.getItem("ID");
-    const userRequest = {                           //送る内容を封筒に収める
+    const userRequest = {                               //送る内容を封筒に収める
         upload_image_id: userID,
         stamp_id: effectName
     }
@@ -37,15 +37,21 @@ async function EffectSelect(effectName){
 
     Img.onload = () => {                                        //画像読み込み終わった後の処理
         context.clearRect(0,0,ImageSpace.clientWidth,ImageSpace.clientHeight);  //一回全消し
-        const scale = ImageSpace.width/Img.width;
+        if(Img.width <= Img.height){
+          const scale = ImageSpace.height/Img.height;
+          ImageSpace.setAttribute('width', Img.width*scale)
+          context.drawImage(Img, 0, 0, Img.width*scale, Img.height*scale);
+        }else{
+          const scale = ImageSpace.width/Img.width;
+          ImageSpace.setAttribute('height', Img.height*scale)
+          context.drawImage(Img, 0, 0, Img.width*scale, Img.height*scale);
+        }
         const effectImg = new Image();
-        console.log("stamp_image:", result["stamp_image"]);
         effectImg.src = result["stamp_image"];
         effectImg.onload = () => {
             const effectX = result["x"];
             const effectY = result["y"];
             const effectScale = result["scale"];
-            context.drawImage(Img, 0, 0, Img.width*scale, Img.height*scale);
             context.drawImage(effectImg, effectX, effectY, effectImg.width*effectScale, effectImg.height*effectScale);
         }
     }
