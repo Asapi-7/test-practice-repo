@@ -32,12 +32,21 @@ function ImageImport(files){
       //描画箇所に保存した画像を描画する
       const ImageSpace = document.getElementById('ImageSpace');   //描画領域となるcanvasを指定
       const context = ImageSpace.getContext('2d');                //2D描画用のコンテキストを取得
+      ImageSpace.setAttribute('width', '650');                //2D描画用のコンテキストを取得
+      ImageSpace.setAttribute('height', '650');
       const Img = new Image();
       Img.src = event.target.result;                              //画像読み込み開始
 
       Img.onload = () => {                                        //画像読み込み終わった後の処理
-        const scale = ImageSpace.width/Img.width;
-        context.drawImage(Img, 0, 0, Img.width*scale, Img.height*scale);
+        if(Img.width <= Img.height){
+          const scale = ImageSpace.height/Img.height;
+          ImageSpace.setAttribute('width', Img.width*scale)
+          context.drawImage(Img, 0, 0, Img.width*scale, Img.height*scale);
+        }else{
+          const scale = ImageSpace.width/Img.width;
+          ImageSpace.setAttribute('height', Img.height*scale)
+          context.drawImage(Img, 0, 0, Img.width*scale, Img.height*scale);
+        }
         console.log("deteru?");
         sessionStorage.setItem("Img", JSON.stringify(event.target.result));         //画像を他の関数でも使えるよう保存しておく    
       }
