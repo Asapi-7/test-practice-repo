@@ -7,9 +7,21 @@ from typing import Dict, List
 #
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
+#勝手に足しました:みうら
+from fastapi.staticfiles import StaticFiles
+#
 from pydantic import BaseModel
 from typing import Dict
 from PIL import Image
+
+#勝手に足しました:みうら
+import base64
+
+def encode_image_to_base64(image_path: str) -> str:
+    with open(image_path, "rb") as image_file:
+        encoded_bytes = base64.b64encode(image_file.read())
+        return f"data:image/png;base64,{encoded_bytes.decode('utf-8')}"
+#
 
 # --- 1. FastAPIアプリの初期化 ---
 app = FastAPI()
@@ -118,13 +130,24 @@ async def get_stamp_info(data: StampRequestData):
     landmarks = image_landmark_storage.get(data.upload_image_id)
     if not landmarks:
         raise HTTPException(status_code=404, detail="Upload Image ID not found.")
+# 2) スタンプ画像ファイルを www/<stamp_id> から読む
+    stamp_path = os.path.join(WWW_DIR, data.stamp_id + ".png")
+    if not os.path.exists(stamp_path):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Stamp asset '{data.stamp_id}' not found on server."
+        )
+
+    # Base64化して、フロントが直接<img src="...">に使える形にする
+    stamp_image_b64 = encode_image_to_base64(stamp_path)
+
 
     stamp_config = STAMP_PLACEMENT_RULES.get(data.stamp_id)
 
     if not stamp_config:
         nose_landmark = landmarks.get("nose", {"x": 100, "y": 100})
         return JSONResponse(content={
-            "stamp_id": data.stamp_id, "x": nose_landmark["x"], "y": nose_landmark["y"], "scale": scale
+            "stamp_id": data.stamp_id, "x": nose_landmark["x"], "y": nose_landmark["y"], "scale": 1, "stamp_image": stamp_image_b64
         })
 
     stamp_type = stamp_config["type"]
@@ -140,7 +163,7 @@ async def get_stamp_info(data: StampRequestData):
         right_eye_landmark = landmarks["right_eye"]
         x = (left_eye_landmark["x"] + right_eye_landmark["x"]) // 2
         y = (left_eye_landmark["y"] + right_eye_landmark["y"]) // 2
-        eye_dist = abs(re["x"] - le["x"])
+        eye_dist = abs(right_eye_landmark["x"] - left_eye_landmark["x"])
         needed_width_px = eye_dist + 20  # 目の距離 + ちょい余白
     
     elif stamp_type == "hat":
@@ -165,9 +188,10 @@ async def get_stamp_info(data: StampRequestData):
         "y": y,
         # フロント側でスタンプ画像を何倍にすればいいか
         "scale": scale,
-         # フロントが背景として描画する用
-        "base_image_url": f"/work/{data.upload_image_id}/original.jpg"
-    })
+        "stamp_image": stamp_image_b64
+        
+    }
+)
     # ======加えたよ===================================================
 # 10. フロントファイルをアップロードするエンドポイント
 #
@@ -187,6 +211,8 @@ async def get_stamp_info(data: StampRequestData):
 # =========================================================
 @app.post("/upload_static_files", tags=["0. Frontend Static Upload"])
 async def upload_static_files(files: List[UploadFile] = File(...)):
+    
+    
     saved_urls: List[str] = []
 
     for uploaded in files:
@@ -198,7 +224,7 @@ async def upload_static_files(files: List[UploadFile] = File(...)):
 
         # 拡張子チェック：.html / .js 以外は拒否（安全のため）
         _, ext = os.path.splitext(filename.lower())
-        if ext not in [".html", ".htm", ".js"]:
+        if ext not in [".html", ".htm", ".js", ".css", ".png", ".jpg", ".jpeg", ".gif"]:
             raise HTTPException(
                 status_code=400,
                 detail=f"Extension not allowed: {ext}"
@@ -213,7 +239,6 @@ async def upload_static_files(files: List[UploadFile] = File(...)):
 
         # 後で確認しやすいように、公開URLも返す
         saved_urls.append(f"/static/{filename}")
-
     return JSONResponse(content={
         "status": "ok",
         "uploaded_files": saved_urls,
