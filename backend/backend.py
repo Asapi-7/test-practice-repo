@@ -9,6 +9,8 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
 #勝手に足しました:みうら
 from fastapi.staticfiles import StaticFiles
+from contextlib import asynccontextmanager
+import asyncio, time, shutil
 #
 from pydantic import BaseModel
 from typing import Dict
@@ -21,10 +23,35 @@ def encode_image_to_base64(image_path: str) -> str:
     with open(image_path, "rb") as image_file:
         encoded_bytes = base64.b64encode(image_file.read())
         return f"data:image/png;base64,{encoded_bytes.decode('utf-8')}"
+
+ID_ACCESS_LOG = {}
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(cleanup_id())
+    yield
+    task.cancel()
+    if os.path.exists(TEMP_DIR):
+        shutil.rmtree(TEMP_DIR)         #サーバーが閉じるとディレクトリを削除
+
+async def cleanup_id():             #サーバーが開くと同時に1分おきの処理が始まる
+    while True:
+        print("cleanup now")
+        now = time.time()
+        print(now)
+        for upload_image_id, last_access in list(ID_ACCESS_LOG.items()):
+            print("last_access:",last_access)
+            if(now - last_access > 600):
+                dir_path = os.path.join(TEMP_DIR, upload_image_id)
+                if os.path.exists(dir_path):
+                    shutil.rmtree(dir_path)
+                    del ID_ACCESS_LOG[upload_image_id]
+                    print("can cleanup")
+        await asyncio.sleep(60)
 #
 
 # --- 1. FastAPIアプリの初期化 ---
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 # --- 2. ディレクトリ設定 ---
 TEMP_DIR = "temp"
@@ -110,6 +137,10 @@ async def upload_and_detect_landmarks(file: UploadFile = File(...)):
     landmarks = detect_landmarks_dummy(original_image_path)
     
     image_landmark_storage[upload_image_id] = landmarks
+
+    #勝手に足しました:みうら
+    ID_ACCESS_LOG[upload_image_id] = time.time()        #アクセス履歴を残す
+    #
     
     return JSONResponse(content={"upload_image_id": upload_image_id})
 
@@ -192,6 +223,10 @@ async def get_stamp_info(data: StampRequestData):
         base_width_px = 100
     scale = needed_width_px / base_width_px
     
+    #勝手に足しました:みうら
+    ID_ACCESS_LOG[data.upload_image_id] = time.time()        #アクセス履歴を更新
+    #
+
     return JSONResponse(content={
         "stamp_id": data.stamp_id,
         "x": x,
