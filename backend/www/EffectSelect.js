@@ -1,14 +1,14 @@
 async function EffectSelect(effectName){
     //effectNameを元に、選択された画像と位置を取得、描画
     //画像インポート時にバックエンドから返される内容に応じて、フロントで行う処理の内容が変動
-    async function requestEffect(userRequest){                //asyncは内部に非同期処理が存在することを表す
+    async function requestEffect(userRequest){               //asyncは内部に非同期処理が存在することを表す
         try{
             const response = await fetch('/get_stamp_info',{ //awaitは処理が終わるまで待機をお願いする
-                method: 'POST',                           //これはPOSTメソッドです
-                headers: {                                //送るデータはこの形状です
+                method: 'POST',                             //これはPOSTメソッドです
+                headers: {                                  //送るデータはこの形状です
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(userRequest)         //実際に送るデータです
+                body: JSON.stringify(userRequest)           //実際に送るデータです
             });
             if(!response.ok){
                 throw new Error('返答が芳しくなかった');
@@ -37,7 +37,7 @@ async function EffectSelect(effectName){
 
     Img.onload = () => {                                        //画像読み込み終わった後の処理
         context.clearRect(0,0,ImageSpace.clientWidth,ImageSpace.clientHeight);  //一回全消し
-        if(Img.width <= Img.height){
+        if(Img.width <= Img.height){                                            //元画像描画し直し
           const scale = ImageSpace.height/Img.height;
           ImageSpace.setAttribute('width', Img.width*scale)
           context.drawImage(Img, 0, 0, Img.width*scale, Img.height*scale);
