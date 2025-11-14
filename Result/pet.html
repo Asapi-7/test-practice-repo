@@ -4,6 +4,21 @@
   <title>ペットをおしゃれにしてみましょう</title>
   <meta charset="UTF-8">
   <style>
+@import url('https://fonts.googleapis.com/css2?family=Cherry+Bomb+One&display=swap');
+
+.title{
+    font-family: 'Cherry Bomb One',cursive;
+    text-align: center;
+    font-size: 40px;
+    color: hotpink;
+}
+.canvasanddownload{
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
     .canvas-and-button{
         display:flex;
         align-items: flex-start;
@@ -13,16 +28,16 @@
     }
     .EffectButton{
         display: grid;
-        grid-template-columns: repeat(2,70px);
-        grid-template-rows: repeat(8,70px);
+        grid-template-columns: repeat(2,100px);
+        grid-template-rows: repeat(8,100px);
         gap:10px;
         justify-content: flex-end;
         margin-right:20px;
     }
 
     .effect-button{
-        width:70px;
-        height:70px;
+        width:100px;
+        height:100px;
         border: none;
         background: none;
         padding:0;
@@ -38,28 +53,42 @@
 
     #ImageSpace{
         background-color: lightpink;
+        display: block;
     }
 
     .downloadbutton{
-        display:flex;
-        justify-content: center;
-        margin-top: 40px;
+        position: absolute;
+        bottom: -30px;
+    }
+    
+    .download{
+        display:inline-block;
+        position:relative;
+        width: 140px;
+        height:55px;
+        
     }
   </style>
 </head>
 <body>
-<h1>ペットをおしゃれにしてみましょう</h1>
+<h1 class="title">ペットをおしゃれにしてみましょう</h1>
 <p><input type="file" accept="image/*" onchange="ImageImport(this.files)"></p>
 <div class="canvas-and-button">
+<div class="canvasanddownload">
 <canvas id="ImageSpace" width="650" height="650">
     ここにペットの写真が表示されます
 </canvas>
+<div class="downloadbutton">
+<button class="download" type="button" onclick="ImageDownload()">保存</button>
+</div>
+</div>
+
 <!---->
 <script src="ImageImport.js"></script><!--ここはテスト用本来はImageImport.jsって書く-->
 <!--勝手に足しました:みうら-->
 <script src="EffectSelect.js"></script>
 <script src="ImageDownload.js"></script>
-<!---->
+
 <div class="EffectButton">
 <button class="effect-button" type="button" name = "glasses" onclick = "EffectSelect(this.name)">
     <img src="glass.png" alt="glass Image" style="height: 100%;">
@@ -87,8 +116,5 @@
 </button>
 </div>
 </div>
-<div class="downloadbutton">
-<button class="download" type="button" onclick="ImageDownload()">保存</button>
-<div>
 </body>
 </html>
