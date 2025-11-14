@@ -29,6 +29,8 @@ function ImageImport(files){
       sessionStorage.setItem("ID", userID);       //ユーザー自身でIDを保持
       console.log(userID);
 
+      //ここでスタンプごとのオンオフ状況を得るリストを生成して、全部オフで初期化しちゃおう
+
       //描画箇所に保存した画像を描画する
       const ImageSpace = document.getElementById('ImageSpace');   //描画領域となるcanvasを指定
       const context = ImageSpace.getContext('2d');                //2D描画用のコンテキストを取得　指定したcanvas専用のお絵描き道具得る感じ？
