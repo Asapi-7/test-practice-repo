@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ペットをおしゃれにしてみましょう</title>
+  <meta charset="UTF-8">
+  <style>
+    .canvas-and-button{
+        display:flex;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 40px;
+        margin-top: 20px;
+    }
+    .EffectButton{
+        display: grid;
+        grid-template-columns: repeat(2,70px);
+        grid-template-rows: repeat(8,70px);
+        gap:10px;
+        justify-content: flex-end;
+        margin-right:20px;
+    }
+
+    .effect-button{
+        width:70px;
+        height:70px;
+        border: none;
+        background: none;
+        padding:0;
+        cursor: pointer;
+    }
+
+    .effect-button img{
+        width:100%;
+        height:100%;
+        display: block;
+        object-fit: fill;
+    }
+
+    #ImageSpace{
+        background-color: lightpink;
+    }
+
+    .downloadbutton{
+        display:flex;
+        justify-content: center;
+        margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+<h1>ペットをおしゃれにしてみましょう</h1>
+<p><input type="file" accept="image/*" onchange="ImageImport(this.files)"></p>
+<div class="canvas-and-button">
+<canvas id="ImageSpace" width="650" height="650">
+    ここにペットの写真が表示されます
+</canvas>
+<!---->
+<script src="ImageImport.js"></script><!--ここはテスト用本来はImageImport.jsって書く-->
+<!--勝手に足しました:みうら-->
+<script src="EffectSelect.js"></script>
+<script src="ImageDownload.js"></script>
+<!---->
+<div class="EffectButton">
+<button class="effect-button" type="button" name = "glasses" onclick = "EffectSelect(this.name)">
+    <img src="glass.png" alt="glass Image" style="height: 100%;">
+</button>
+<button class="effect-button" type="button" name = "hat" onclick = "EffectSelect(this.name)">
+    <img src="hat.png" alt="hat Image" style="height: 100%;">
+</button>
+<button class="effect-button" type="button" name = "ribbon" onclick = "EffectSelect(this.name)">
+    <img src="ribbon.png" alt="Ribbon Image" style="height: 100%;">
+</button>
+<button class="effect-button" type="button" name = "hart" onclick = "EffectSelect(this.name)">
+    <img src="hart.png" alt="hart Image" style="height: 100%;">
+</button>
+<button class="effect-button" type="button" name = "gantai" onclick = "EffectSelect(this.name)">
+    <img src="gantai.png" alt="gantai Image" style="height: 100%;">
+</button>
+<button class="effect-button" type="button" name = "oukan" onclick = "EffectSelect(this.name)">
+    <img src="oukan.png" alt="oukan Image" style="height: 100%;">
+</button>
+<button class="effect-button" type="button" name = "rabbit" onclick = "EffectSelect(this.name)">
+    <img src="rabbit.png" alt="rabbit Image" style="height: 100%;">
+</button>
+<button class="effect-button" type="button" name = "star" onclick = "EffectSelect(this.name)">
+    <img src="star.png" alt="star Image" style="height: 100%;">
+</button>
+</div>
+</div>
+<div class="downloadbutton">
+<button class="download" type="button" onclick="ImageDownload()">保存</button>
+<div>
+</body>
+</html>
