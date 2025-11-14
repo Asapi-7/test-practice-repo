@@ -22,7 +22,7 @@ async function EffectSelect(effectName){
         }
 
     sessionStorage.setItem("effect",effectName);
-    const userID = sessionStorage.getItem("ID");
+    const userID = sessionStorage.getItem("ID");        //保存していたIDを回収する
     const userRequest = {                               //送る内容を封筒に収める
         upload_image_id: userID,
         stamp_id: effectName
