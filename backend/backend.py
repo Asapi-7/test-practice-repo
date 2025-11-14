@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
     task = asyncio.create_task(cleanup_id())
     yield
     task.cancel()
-    if os.path.exists(TEMP_DIR):
+    if os.path.exists(TEMP_DIR):        #指定パスが存在するかを確かめる
         shutil.rmtree(TEMP_DIR)         #サーバーが閉じるとディレクトリを削除
 
 async def cleanup_id():             #サーバーが開くと同時に1分おきの処理が始まる
