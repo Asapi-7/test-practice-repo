@@ -25,21 +25,24 @@ function ImageImport(files){
       }
     
       const result = await sendUserImage(file);   //手紙を送って、返信を格納できるまで少し待つ
-      const userID = result["upload_image_id"];
-      sessionStorage.setItem("ID", userID);
+      const userID = result["upload_image_id"];   //返答からIDの情報を取る
+      sessionStorage.setItem("ID", userID);       //ユーザー自身でIDを保持
       console.log(userID);
+
+      const OnEffect = [];                                        //有効化しているエフェクトを持つリスト
+      sessionStorage.setItem("OnEffect",JSON.stringify(OnEffect)) //エフェクトの有効化状況を保存
 
       //描画箇所に保存した画像を描画する
       const ImageSpace = document.getElementById('ImageSpace');   //描画領域となるcanvasを指定
-      const context = ImageSpace.getContext('2d');                //2D描画用のコンテキストを取得
+      const context = ImageSpace.getContext('2d');                //2D描画用のコンテキストを取得　指定したcanvas専用のお絵描き道具得る感じ？
       ImageSpace.setAttribute('width', '650');                    //画像再インポート時、canvasサイズを元の大きさに戻したり一回全消ししたり
       ImageSpace.setAttribute('height', '650');
       context.clearRect(0,0,ImageSpace.clientWidth,ImageSpace.clientHeight);
       const Img = new Image();                                    //ここに画像が入る
-      Img.src = event.target.result;                              //画像読み込み開始
+      Img.src = event.target.result;                              //画像読み込み開始　こいつは処理が長い
 
       Img.onload = () => {                                        //画像読み込み終わった後の処理
-        if(Img.width <= Img.height){
+        if(Img.width <= Img.height){                              //画像が縦長か横長かによって、幅を合わせる方を変更
           const scale = ImageSpace.height/Img.height;
           ImageSpace.setAttribute('width', Img.width*scale)
           context.drawImage(Img, 0, 0, Img.width*scale, Img.height*scale);
@@ -52,8 +55,8 @@ function ImageImport(files){
         sessionStorage.setItem("Img", JSON.stringify(event.target.result));         //画像を他の関数でも使えるよう保存しておく    
       }
     }
-    reader.readAsDataURL(file);                                     //これに成功するとreader.onloadが動き出す
+    reader.readAsDataURL(file);                                     //画像をURLに変換　これに成功するとreader.onloadが動き出す
 	}
 }
 
-//strage: ID, Img
+//strage: ID, OnEffect, Img
