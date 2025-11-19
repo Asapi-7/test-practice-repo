@@ -48,7 +48,6 @@ async def cleanup_id():
                     shutil.rmtree(dir_path) # フォルダごと削除
                     del ID_ACCESS_LOG[upload_image_id] # アクセス履歴からも削除
                     print(f"ID: {upload_image_id} は古くなったので削除しました。")
-        # --- ここまでがクリーンアップ処理 ---
         
         await asyncio.sleep(60)
 
@@ -68,9 +67,6 @@ os.makedirs(WWW_DIR, exist_ok=True)
 # -> http://localhost:8000/static/pet.html で pet.html が見える
 # -> http://localhost:8000/static/EffectSelect.js でJSが見える
 app.mount("/static", StaticFiles(directory=WWW_DIR), name="static")
-
-# =========================================================
-
 
 # --- 3. ランドマークを保存するための仮のデータベース ---
 image_landmark_storage: Dict[str, Dict] = {}
@@ -175,8 +171,6 @@ async def upload_and_detect_landmarks(file: UploadFile = File(...)):
         print("ML検出失敗。ダミーロジックで代替します。")
         # 以前のダミー関数を呼び出す（関数名を変更）
         landmarks = detect_landmarks_dummy_fallback(original_image_path)
-        if landmarks is None: # 万が一ダミーも失敗した場合
-            raise HTTPException(status_code=400, detail="Failed to process image.")
 
     image_landmark_storage[upload_image_id] = landmarks
     
