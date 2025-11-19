@@ -27,4 +27,4 @@ async function EffectRemove(effectName){
     }
 }
 
-//strage: ID, OnEffect, Img
+//strage: ID, OnEffect, UserImageScale, Img

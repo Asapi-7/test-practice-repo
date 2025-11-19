@@ -20,8 +20,9 @@ async function EffectSelect(effectName){
             }
         }
 
-    const OnEffect = JSON.parse(sessionStorage.getItem("OnEffect"));    //保存していたエフェクトの有効化状況を回収する
     const userID = sessionStorage.getItem("ID");                        //保存していたIDを回収する
+    const OnEffect = JSON.parse(sessionStorage.getItem("OnEffect"));    //保存していたエフェクトの有効化状況を回収する
+    const UserImageScale = JSON.parse(sessionStorage.getItem("UserImageScale"));    //ユーザーが入れた画像の表示倍率を回収する
     OnEffect.push(effectName);                                          //新しく有効化されるエフェクトを保存
     console.log(OnEffect);
     sessionStorage.setItem("OnEffect",JSON.stringify(OnEffect))         //エフェクトの有効化状況を再度保存
@@ -44,4 +45,5 @@ async function EffectSelect(effectName){
     }
 }
 
-//strage: ID, OnEffect, Img
+//UserImageScaleが加工する画像の倍率です
+//strage: ID, OnEffect, UserImageScale, Img

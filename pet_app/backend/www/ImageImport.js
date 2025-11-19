@@ -42,16 +42,18 @@ function ImageImport(files){
       Img.src = event.target.result;                              //画像読み込み開始　こいつは処理が長い
 
       Img.onload = () => {                                        //画像読み込み終わった後の処理
+        const scale = 0;
         if(Img.width <= Img.height){                              //画像が縦長か横長かによって、幅を合わせる方を変更
-          const scale = ImageSpace.height/Img.height;
+          scale = ImageSpace.height/Img.height;
           ImageSpace.setAttribute('width', Img.width*scale)
           context.drawImage(Img, 0, 0, Img.width*scale, Img.height*scale);
         }else{
-          const scale = ImageSpace.width/Img.width;
+          scale = ImageSpace.width/Img.width;
           ImageSpace.setAttribute('height', Img.height*scale)
           context.drawImage(Img, 0, 0, Img.width*scale, Img.height*scale);
         }
         console.log("deteru?");
+        sessionStorage.setItem("UserImageScale", JSON.stringify(scale));            //ユーザーが入れた画像を、描画時どれくらいのスケールに変更しているかを保存
         sessionStorage.setItem("Img", JSON.stringify(event.target.result));         //画像を他の関数でも使えるよう保存しておく    
       }
     }
@@ -59,4 +61,4 @@ function ImageImport(files){
 	}
 }
 
-//strage: ID, OnEffect, Img
+//strage: ID, OnEffect, UserImageScale, Img
