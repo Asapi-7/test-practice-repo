@@ -13,7 +13,6 @@ function ImageDownload(){
 			console.error("ダウンロード失敗");
 		}
 	}, 'image/png')
-	console.log("ya");
 }
 
-//strage: ID, Img, effect
+//strage: ID, OnEffect, Img

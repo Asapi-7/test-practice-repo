@@ -1,6 +1,5 @@
 async function EffectSelect(effectName){
     //effectNameを元に、選択された画像と位置を取得、描画
-    //画像インポート時にバックエンドから返される内容に応じて、フロントで行う処理の内容が変動
     async function requestEffect(userRequest){               //asyncは内部に非同期処理が存在することを表す
         try{
             const response = await fetch('/get_stamp_info',{ //awaitは処理が終わるまで待機をお願いする
@@ -21,9 +20,12 @@ async function EffectSelect(effectName){
             }
         }
 
-    sessionStorage.setItem("effect",effectName);
-    const userID = sessionStorage.getItem("ID");
-    const userRequest = {                               //送る内容を封筒に収める
+    const OnEffect = JSON.parse(sessionStorage.getItem("OnEffect"));    //保存していたエフェクトの有効化状況を回収する
+    const userID = sessionStorage.getItem("ID");                        //保存していたIDを回収する
+    OnEffect.push(effectName);                                          //新しく有効化されるエフェクトを保存
+    console.log(OnEffect);
+    sessionStorage.setItem("OnEffect",JSON.stringify(OnEffect))         //エフェクトの有効化状況を再度保存
+    const userRequest = {                                               //送る内容を封筒に収める
         upload_image_id: userID,
         stamp_id: effectName
     }
@@ -32,29 +34,14 @@ async function EffectSelect(effectName){
     
     const ImageSpace = document.getElementById('ImageSpace');   //描画領域となるcanvasを指定
     const context = ImageSpace.getContext('2d');                //2D描画用のコンテキストを取得
-    const Img = new Image();
-    Img.src = JSON.parse(sessionStorage.getItem("Img"));        //画像読み込み開始
-
-    Img.onload = () => {                                        //画像読み込み終わった後の処理
-        context.clearRect(0,0,ImageSpace.clientWidth,ImageSpace.clientHeight);  //一回全消し
-        if(Img.width <= Img.height){                                            //元画像描画し直し
-          const scale = ImageSpace.height/Img.height;
-          ImageSpace.setAttribute('width', Img.width*scale)
-          context.drawImage(Img, 0, 0, Img.width*scale, Img.height*scale);
-        }else{
-          const scale = ImageSpace.width/Img.width;
-          ImageSpace.setAttribute('height', Img.height*scale)
-          context.drawImage(Img, 0, 0, Img.width*scale, Img.height*scale);
-        }
-        const effectImg = new Image();
-        effectImg.src = result["stamp_image"];
-        effectImg.onload = () => {
-            const effectX = result["x"];
-            const effectY = result["y"];
-            const effectScale = result["scale"];
-            context.drawImage(effectImg, effectX, effectY, effectImg.width*effectScale, effectImg.height*effectScale);
-        }
+    const effectImg = new Image();
+    effectImg.src = result["stamp_image"];                      //エフェクト画像の読み込み開始
+    effectImg.onload = () => {                                  //読み込み完了後、バックエンドの指示通りに画像を描画
+        const effectX = result["x"];
+        const effectY = result["y"];
+        const effectScale = result["scale"];
+        context.drawImage(effectImg, effectX, effectY, effectImg.width*effectScale, effectImg.height*effectScale);
     }
 }
 
-//strage: ID, Img, effect
+//strage: ID, OnEffect, Img
