@@ -65,7 +65,9 @@ def load_ml_model():
 # ==========================
 # 推論関数（バックエンド連携用）
 # ==========================
-def detect_face(image_path: str, threshold: float = 0.3) -> Optional[Tuple[List[float], float]]:
+
+
+def detect_face(image_path: str, threshold: float = 0.05, allow_low_confidence: bool = False) -> Optional[Tuple[List[float], float]]:
     """
     画像から顔を検出し、(bbox, score)またはNoneを返す
     """
@@ -75,7 +77,9 @@ def detect_face(image_path: str, threshold: float = 0.3) -> Optional[Tuple[List[
         return None
 
     model.eval()
+    print(f"DEBUG detect_face called with: {image_path}")
     img = Image.open(image_path).convert("RGB")
+    print(f"DEBUG image size: {img.size}, mode: {img.mode}")
 
     transform = T.ToTensor()
     img_tensor = transform(img).unsqueeze(0).to(device)
@@ -84,22 +88,32 @@ def detect_face(image_path: str, threshold: float = 0.3) -> Optional[Tuple[List[
         outputs = model(img_tensor)
 
     output = outputs[0]
+    # デバッグ: raw boxes/scores (既に追加済み)
+    print("DEBUG raw boxes:", output.get("boxes"))
+    print("DEBUG raw scores:", output.get("scores"))
     boxes = output["boxes"].cpu()
     scores = output["scores"].cpu()
 
-    # 閾値でフィルタリング
     keep = scores >= threshold
     boxes = boxes[keep]
     scores = scores[keep]
 
     if len(boxes) == 0:
-        return None  # 顔なし
+        # オプションで最低スコアのものを返す
+        if allow_low_confidence and len(output["scores"]) > 0:
+            best_idx = int(output["scores"].argmax().item())
+            bbox = output["boxes"][best_idx].tolist()
+            score = float(output["scores"][best_idx])
+            print(f"DEBUG detect_face returning best low-confidence: {score}")
+            return (bbox, score)
+        print("DEBUG detect_face result: None")
+        return None
 
-    # 最もスコアが高いボックスを返す
-    best_idx = scores.argmax()
+    best_idx = int(scores.argmax().item())
     bbox = boxes[best_idx].tolist()
     score = float(scores[best_idx])
-
-    return bbox, score
+    result = (bbox, score)
+    print(f"DEBUG detect_face result: {repr(result)}")
+    return result
 
 # (テスト実行用の __main__ は省略)
