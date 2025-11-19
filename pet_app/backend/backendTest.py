@@ -333,88 +333,104 @@ async def get_stamp_info(data: StampRequestData):
     ↓
     　 スタンプの名前とエフェクトを貼る位置とサイズを返す
     """
+    # temp/<upload_image_id>/landmarks.jsonからランドマークを取得
+    landmarks_unity = os.path.join(TEMP_DIR, data.upload_image_id, "landmarks.json")
+    if not os.path.exists(landmarks_unity):
+        raise HTTPException(status_code=404, detail="Upload Image IDが見つかりませんでした。")
+    with open(landmarks_unity, "r", encoding="utf-8") as f:
+        unity = json.load(f)
+    centers = unity.get("centers")
+    meta = unity.get("meta")
 
-    landmarks = image_landmark_storage.get(data.upload_image_id)
-    if not landmarks:
-        raise HTTPException(status_code=404, detail="Upload Image ID not found.")
+    # centers = { left_eye:{x,y}, right_eye:{x,y}, nose:{x,y}, mouth:{x,y} }
+    try:
+        le = centers["left_eye"]
+        re = centers["right_eye"]
+        nose = centers["nose"]
+        mouth = centers["mouth"]
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"必要ランドマーク不足: {e}")
+
+    # -----------------------------
+    # 2) スタンプ画像読み込み
+    # -----------------------------
+
 # 2) スタンプ画像ファイルを www/<stamp_id> から読む
     stamp_path = os.path.join(WWW_DIR, data.stamp_id + ".png")
     if not os.path.exists(stamp_path):
-        raise HTTPException(
-            status_code=404,
-            detail=f"Stamp asset '{data.stamp_id}' not found on server. Tried path: {stamp_path}"
-        )
+        raise HTTPException(status_code=404, detail=f"スタンプ画像が見つかりません: {stamp_path}")
 
-    # Base64化して、フロントが直接<img src="...">に使える形にする
     stamp_image_b64 = encode_image_to_base64(stamp_path)
 
+    # 元画像の横幅
+    with Image.open(stamp_path) as s_img:
+        stamp_w, stamp_h = s_img.size
 
-    stamp_config = STAMP_PLACEMENT_RULES.get(data.stamp_id)
+    # -----------------------------
+    # 3) 基本量の計算
+    # -----------------------------
+    eye_dist = abs(re["x"] - le["x"])           # 目と目の距離
+    eye_center_x = (le["x"] + re["x"]) / 2      # 目の中心X
+    eye_center_y = (le["y"] + re["y"]) / 2      # 目の中心Y
+    nose_mouth_dist = abs(mouth["y"] - nose["y"])
 
-    # 登録されていないスタンプIDが送られてきたときはエラーを返す
-    if not stamp_config:
-        raise HTTPException(
-            status_code=404,
-            detail=f"登録されていないスタンプIDです。送られてきたIDは'{data.stamp_id}'です。"
-        )
+    # -----------------------------
+    # 4) スタンプ種別ごとに位置とサイズを計算
+    # -----------------------------
+    stamp_type = STAMP_PLACEMENT_RULES[data.stamp_id]["type"]
 
-    stamp_type = stamp_config["type"]
-    
-    # 必要なランドマークがないときにエラーを返す
-    if "required_landmarks" in stamp_config:
-        for required in stamp_config["required_landmarks"]:
-            if required not in landmarks:
-                raise HTTPException(status_code=400, detail=f"このスタンプに必要なランドマーク'{required}'が見つかりませんでした。")
-
-    x, y, needed_width_px = 0, 0, 100
+    # 初期値
+    needed_width_px = eye_dist * 1.8   # だいたいいい感じの大きさ
+    x_left = eye_center_x - needed_width_px/2
+    y_top  = eye_center_y - needed_width_px/2
 
     if stamp_type == "glasses":
-        left_eye_landmark = landmarks["left_eye"]
-        right_eye_landmark = landmarks["right_eye"]
-        x = (left_eye_landmark["x"] + right_eye_landmark["x"]) // 2
-        y = (left_eye_landmark["y"] + right_eye_landmark["y"]) // 2
-        eye_dist = abs(right_eye_landmark["x"] - left_eye_landmark["x"])
-        needed_width_px = eye_dist + 20  # 目の距離 + ちょい余白
-    
-    elif stamp_type == "hat":
-        forehead_landmark = landmarks["forehead"]
-        x, y = forehead_landmark["x"], forehead_landmark["y"]
-        eye_dist = abs(landmarks["right_eye"]["x"] - landmarks["left_eye"]["x"])
-        needed_width_px = eye_dist * 2  # 帽子は顔幅よりちょい大きく
+        # ● メガネ位置
+        needed_width_px = eye_dist * 1.6
+        x_left = le["x"] - eye_dist * 0.35
+        y_top  = eye_center_y - eye_dist * 0.35
 
-    elif stamp_type == "nose":
-        nose_landmark = landmarks["nose"]
-        x, y = nose_landmark["x"], nose_landmark["y"]
-        needed_width_px = 50  # 鼻スタンプは固定気味
+    elif stamp_type == "hat":
+        # ● 帽子（頭の上に乗る）
+        needed_width_px = eye_dist * 2.4
+        x_left = le["x"] - eye_dist * 0.7
+        y_top  = eye_center_y - eye_dist * 1.9   # 大きめに上へ
 
     elif stamp_type == "gantai":
-        # 左目の眼帯だけ設定しました
-        left_eye_landmark = landmarks["left_eye"]
-        x, y = left_eye_landmark["x"], left_eye_landmark["y"]
-        # サイズは目と目の距離の0.8倍にしました
-        eye_dist = abs(landmarks["right_eye"]["x"] - landmarks["left_eye"]["x"])
-        needed_width_px = eye_dist * 0.8
-        
-    # 基準幅から倍率を計算
-    base_width_px = STAMP_PX.get(data.stamp_id, 100)
+        # ● 眼帯（左目が基準）
+        needed_width_px = eye_dist * 1.2
+        x_left = le["x"] - eye_dist * 0.4
+        y_top  = le["y"] - eye_dist * 0.4
+
+    else:
+        # その他スタンプ（鼻あたり）
+        needed_width_px = eye_dist * 1.0
+        x_left = nose["x"] - needed_width_px/2
+        y_top  = nose["y"] - needed_width_px/2
+
+    # -----------------------------
+    # 5) scale 計算（左上座標に丸め）
+    # -----------------------------
+    base_width_px = STAMP_PX.get(data.stamp_id, stamp_w)
     if base_width_px <= 0:
-        base_width_px = 100
+        base_width_px = stamp_w
+
     scale = needed_width_px / base_width_px
-    
-    # 勝手に足しました:みうら
-    ID_ACCESS_LOG[data.upload_image_id] = time.time() # アクセス履歴を更新
-    #
+
+    x_int = max(0, int(x_left))
+    y_int = max(0, int(y_top))
+
+    # アクセスログ更新
+    ID_ACCESS_LOG[data.upload_image_id] = time.time()
 
     return JSONResponse(content={
         "stamp_id": data.stamp_id,
-        "x": x,
-        "y": y,
-        # フロント側でスタンプ画像を何倍にすればいいか
+        "x": x_int,
+        "y": y_int,
         "scale": scale,
         "stamp_image": stamp_image_b64
-        
-    }
-)
+    })
+    
     # ======加えたよ===================================================
 # 10. フロントファイルをアップロードするエンドポイント
 #
@@ -434,7 +450,6 @@ async def get_stamp_info(data: StampRequestData):
 # =========================================================
 @app.post("/upload_static_files", tags=["0. Frontend Static Upload"])
 async def upload_static_files(files: List[UploadFile] = File(...)):
-    
     
     saved_urls: List[str] = []
 
