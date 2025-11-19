@@ -3,6 +3,7 @@
 <head>
   <title>ペットをおしゃれにしてみましょう</title>
   <meta charset="UTF-8">
+  <meta name="viewport" content="device^width">
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Cherry+Bomb+One&display=swap');
 
@@ -13,7 +14,6 @@
     color: hotpink;
 }
 .canvasanddownload{
-    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -49,16 +49,21 @@
         height:100%;
         display: block;
         object-fit: fill;
+        transform-origin:center;
+        transition:transform 0.3s ease;
+    }
+
+    .effect-button:hover img{
+        transform:scale(1.2)
+    }
+
+    .effect-button:active img{
+        transform:scale(0.95)
     }
 
     #ImageSpace{
         background-color: lightpink;
         display: block;
-    }
-
-    .downloadbutton{
-        position: absolute;
-        bottom: -30px;
     }
     
     .download{
@@ -66,7 +71,21 @@
         position:relative;
         width: 140px;
         height:55px;
-        
+        border:none;
+        background-color:#ff69b4;
+        color:white;
+        cursor:pointer;
+        padding:10px 20px;
+        transition:background-color 0.3s ease;
+    }
+
+    .download:hover{
+        background-color:#ffc0cb;
+    }
+    
+    .download:active{
+        transform:scale(0.85);
+        background-color:#e05e9a;
     }
   </style>
 </head>
