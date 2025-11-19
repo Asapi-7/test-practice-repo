@@ -1,16 +1,30 @@
 import os
 import uuid
 import shutil
-from typing import Dict, List
+
+# 書き加えた
+from typing import Dict, List, Tuple
+#
+
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
+
+# 勝手に足しました：みうら
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import asyncio, time, shutil
+#
+
 from pydantic import BaseModel
 from PIL import Image
+
+# 勝手に足しました：みうら
 import base64
-from .ml_model import load_ml_model, detect_face
+#
+
+import re
+from .ml_model import detect_face, load_ml_model
+import json
 
 def encode_image_to_base64(image_path: str) -> str:
     with open(image_path, "rb") as image_file:
@@ -27,136 +41,242 @@ async def lifespan(app: FastAPI):
     task = asyncio.create_task(cleanup_id())
     yield
     task.cancel()
-    if os.path.exists(TEMP_DIR):
-        shutil.rmtree(TEMP_DIR)
+    if os.path.exists(TEMP_DIR):   # 指定パスが存在するかを確かめる
+        shutil.rmtree(TEMP_DIR)    # サーバーが閉じるとディレクトリを削除
 
-# tempフォルダの画像を削除
-async def cleanup_id():
+# tempフォルダの画像を定期的に削除
+async def cleanup_id():   # サーバーが開くと同時に１分おきの処理が始まる
     while True:
         print("cleanup now")
-        now = time.time() # 1. 現在の時刻を取得
+        now = time.time() # 現在の時刻を取得
         
-        # 2. アクセス履歴(ID_ACCESS_LOG)をチェック
-        #    list()で囲むのは、ループ中に辞書を変更してもエラーにならないようにするため
+        #  アクセス履歴(ID_ACCESS_LOG)をチェック
         for upload_image_id, last_access in list(ID_ACCESS_LOG.items()):
             
-            # 3. 最後のアクセスから600秒 (10分) 以上経過したかチェック
+            # 最後のアクセスから10分以上経過したかチェック
             if (now - last_access > 600):
-                # 4. 10分以上経過していたら、対応する一時フォルダを削除
+                # 10分以上経過していたら、対応するtempフォルダを削除
                 dir_path = os.path.join(TEMP_DIR, upload_image_id)
                 if os.path.exists(dir_path):
                     shutil.rmtree(dir_path) # フォルダごと削除
                     del ID_ACCESS_LOG[upload_image_id] # アクセス履歴からも削除
                     print(f"ID: {upload_image_id} は古くなったので削除しました。")
-        # --- ここまでがクリーンアップ処理 ---
         
         await asyncio.sleep(60)
 
-# --- 1. FastAPIアプリの初期化 ---
+# FastAPIアプリの初期化
 app = FastAPI(lifespan=lifespan)
 
-# --- 2. ディレクトリ設定 ---
+# アップロードされた画像を保存するためのtempディレクトリを作成
 TEMP_DIR = "temp"
 os.makedirs(TEMP_DIR, exist_ok=True)
 
-# フロントエンドの静的ファイルを置く場所
+# フロントエンドの静的ファイルを保存するためのwwwディレクトリを作成
 # 例: pet.html, EffectSelect.js, ImageDownload.js, ImageImport.js
 WWW_DIR = "www"
 os.makedirs(WWW_DIR, exist_ok=True)
 
-# /static 配下で www/ のファイルを公開
+# /static 配下で www/ のファイルを公開 fastAPI動かす用
 # -> http://localhost:8000/static/pet.html で pet.html が見える
 # -> http://localhost:8000/static/EffectSelect.js でJSが見える
 app.mount("/static", StaticFiles(directory=WWW_DIR), name="static")
 
-# =========================================================
-
-
-# --- 3. ランドマークを保存するための仮のデータベース ---
-image_landmark_storage: Dict[str, Dict] = {}
-
-# #################################################
-# ## ★★★ スタンプごとの設定データ（構成体） ★★★
-# #################################################
+# スタンプごとのタイプを設定
 STAMP_PLACEMENT_RULES = {
-    "glasses_touka.png": {
-        "type": "glasses",
-        "required_landmarks": ["left_eye", "right_eye"]
+    "bousi": {
+        "type": "hat"
     },
-    "ribbon.png": {
-        "type": "hat",
-        "required_landmarks": ["forehead", "left_eye", "right_eye"]
+    "chouchou": {
+        "type": "hat"
     },
-    "red_nose.png": {
-        "type": "nose",
-        "required_landmarks": ["nose"]
+    "kanmuri": {
+        "type": "hat"
+    },
+    "mimi": {
+        "type": "hat"
+    },
+    "dokuro": {
+        "type": "gantai"
+    },
+    "glasses": {
+        "type": "glasses"
+    },
+    "sangurasu": {
+        "type": "glasses"
     }
 }
 
-# スタンプごとの「基準となる横幅(px)」
-# この横幅を1.0倍として、顔に合わせてスケールを計算する
-STAMP_BASE_WIDTHS = {
-    "glasses_touka.png": 100,
-    "ribbon.png": 120,
-    "red_nose.png": 40,
-    # 必要に応じて追加
+# ちょうどいいスタンプのサイズを計算するために元画像の横幅のpxを設定しておく
+STAMP_PX = {
+    "bousi": 1280,
+    "chouchou": 1280,
+    "dokuro": 1280,
+    "glasses": 577,
+    "kanmuri": 1280,
+    "mimi": 1280,
+    "sangurasu": 1280,
 }
 
-# --- 4. データ形式の定義 (Pydanticモデル) --
+# ユーザーからサーバーへのデータ形式を定義
 class StampRequestData(BaseModel):
     upload_image_id: str
     stamp_id: str
 
-# --- 5. ダミーのランドマーク検出関数 ---
-def get_landmarks_from_face(image_path: str) -> Dict | None:
-    """
-    顔検出モデルを呼び出し、顔枠からランドマークを「推定」する関数
-    """
-    # 1. MLモデルで顔枠を検出
-    face_data = detect_face(image_path)
-    
-    if face_data is None:
-        print("❌ MLモデルが顔を検出できませんでした。")
-        return None # 顔が見つからなかった
-        
-    bbox, score = face_data
-    xmin, ymin, xmax, ymax = bbox
-    
-    print(f"✅ MLモデルが顔を検出しました: score={score:.2f}")
+# ランドマーク９点の座標テキストデータをリストにする
+def landmark_text_to_list(landmaek_text: str) -> List[List[float]]:
+    points = []
+    pattern = re.compile(r'(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)')# 整数・小数・負の値を含む数値2つがある行を座標データとする
 
-    # 2. 顔枠から各パーツの座標を「推定」する
-    # (これはダミーロジックであり、より正確な推定ロジックに改善可能です)
-    face_center_x = (xmin + xmax) / 2
-    face_center_y = (ymin + ymax) / 2
-    face_width = xmax - xmin
-    face_height = ymax - ymin
+    # テキスト全体を走査
+    for line in landmaek_text.splitlines():
+        match = pattern.search(line.strip())
+        if match :
+            x = float(match.group(1))
+            y = float(match.group(2))
+            points.append([x, y])
+    
+    if len(points) != 9:
+        print(f"ランドマークが９点ありません（検出数: {len(points)}）")
+    
+    return points
 
+# ランドマークから中心座標を計算する
+# テキストデータはpoint0~8に行ごとに分かれてる。それぞれのpointに入ってる2つのデータに名前をつける。
+def get_center_landmarks(points: List[List[float]]) -> Dict:
+    right_eye_right_x, right_eye_right_y = points[0] # 右目右端
+    right_eye_left_x, right_eye_left_y = points[1] # 右目左端
+    left_eye_right_x, left_eye_right_y = points[2] # 左目右端
+    left_eye_left_x, left_eye_left_y = points[3] # 左目左端
+    nose_x, nose_y = points[4] # 鼻
+    mouth_right_x, mouth_right_y = points[5] # 口右端
+    mouth_left_x, mouth_left_y = points[6] # 口左端
+    nose_to_mouth_x, nose_to_mouth_y = points[7] # 鼻と口の間の点
+    mouth_center_x, mouth_center_y = points[8] # 口中央
+
+    # 右目の中心座標を計算
+    right_eye_x = (right_eye_right_x + right_eye_left_x) / 2
+    right_eye_y = (right_eye_right_y + right_eye_left_y) / 2
+
+    # 左目の中心座標を計算
+    left_eye_x = (left_eye_right_x + left_eye_left_x) / 2
+    left_eye_y = (left_eye_right_y + left_eye_left_y) / 2
+
+    # 右目、左目、鼻、口をランドマーク辞書にする
     landmarks = {
-        "left_eye": {
-            "x": int(face_center_x - face_width * 0.2), 
-            "y": int(face_center_y - face_height * 0.1)
-        },
-        "right_eye": {
-            "x": int(face_center_x + face_width * 0.2), 
-            "y": int(face_center_y - face_height * 0.1)
-        },
-        "nose": {
-            "x": int(face_center_x), 
-            "y": int(face_center_y + face_height * 0.1)
-        },
-        "forehead": {
-            "x": int(face_center_x), 
-            "y": int(ymin + face_height * 0.1) # 顔枠の上部付近
-        }
+        "left_eye": { "x": int(left_eye_x), "y": int(left_eye_y)},
+        "right_eye": { "x": int(right_eye_x), "y": int(right_eye_y)},
+        "nose": { "x": int(nose_x), "y": int(nose_y)},
+        "mouth": { "x": int(mouth_center_x), "y": int(mouth_center_y)}
     }
     return landmarks
 
-# --- 6. APIエンドポイントの作成 ---
+def detect_landmarks_text(image_path: str):
+    """
+    detect_face を低閾値で呼ぶ。もし detect_face がランドマークを返さない場合は
+    bbox から簡易的に 9 点のランドマークを近似して返す（暫定対応）。
+    戻り: (face_data, landmarks_list_or_text) where face_data==(bbox,score)
+    """
+    # 低めの閾値で呼ぶ（必要なら allow_low_confidence=True を渡す）
+    res = detect_face(image_path, threshold=0.05, allow_low_confidence=True)
+    if not res:
+        return None, None
+
+    # detect_face は (bbox, score) を返す前提
+    face_data = res
+    # 既にランドマーク文字列や配列を返す実装ならそれを返す（ここでは未想定）
+    # landmarks がないので bbox から近似ランドマークを作る
+    try:
+        bbox, score = face_data
+        x1, y1, x2, y2 = bbox
+        w = x2 - x1
+        h = y2 - y1
+        cx = x1 + w / 2
+        cy = y1 + h * 0.45  # 鼻付近を中心に寄せる
+
+        # 右目右端, 右目左端, 左目右端, 左目左端, 鼻, 口右, 口左, 鼻と口の間, 口中央
+        approx = [
+            [cx + w*0.20, cy - h*0.22],
+            [cx + w*0.05, cy - h*0.22],
+            [cx - w*0.05, cy - h*0.22],
+            [cx - w*0.20, cy - h*0.22],
+            [cx,             cy - h*0.05],
+            [cx + w*0.15, cy + h*0.25],
+            [cx - w*0.15, cy + h*0.25],
+            [cx,             cy + h*0.12],
+            [cx,             cy + h*0.25],
+        ]
+        return face_data, approx
+    except Exception:
+        return face_data, None
+
+# 画像からランドマークを検出する
+def get_landmarks_from_face(image_path: str) -> Dict | None:
+    # MLモデルで顔枠を検出（返り値: (bbox, score), raw_landmark_text/list ）
+    face_data, ML_LANDMARK_TEXT = detect_landmarks_text(image_path)
+    
+    # 顔検出ができなかった時
+    if face_data is None:
+        print("❌ MLモデルが顔を検出できませんでした。")
+        return None, None
+
+    # ランドマーク文字列またはリストから座標リストを作る
+    face_landmarks_data = None
+    if isinstance(ML_LANDMARK_TEXT, str):
+        face_landmarks_data = landmark_text_to_list(ML_LANDMARK_TEXT)
+    elif isinstance(ML_LANDMARK_TEXT, list):
+        face_landmarks_data = ML_LANDMARK_TEXT
+    else:
+        print("❌ランドマーク情報が見つかりません。")
+        return None, None
+
+    if not face_landmarks_data:
+        print("❌ランドマークのパースに失敗しました。")
+        return None, None
+
+    if len(face_landmarks_data) != 9:
+        print(f"❌ランドマークは９点必要です。検出数: {len(face_landmarks_data)}")
+        # 9点でない場合も近似を作るか None を返すかは要件次第。ここでは失敗扱いにする
+        return None, None
+
+    centers = get_center_landmarks(face_landmarks_data)
+
+    # bbox/score を取得（存在しない場合は None）
+    try:
+        bbox, score = face_data
+        print(f"✅MLモデルが顔を検出し、ランドマークを計算しました。score={score: .2f}")
+    except Exception:
+        bbox, score = None, None
+
+    meta = {
+        "raw_points": face_landmarks_data,
+        "bbox": bbox,
+        "score": score
+    }
+    # 戻り値: (centers, meta)
+    return centers, meta
+
+    # 顔検出はできたけど、ランドマークのテキストデータがおかしい時
+    # 顔検出はできたけど、ランドマーク数が足りない時
+    #if len(face_landmarks_data) != 9:
+        #print(f"❌ランドマークは９点必要です。検出数: {len(face_landmarks_data)}")
+        #return None
+    
+    #landmarks = get_center_landmarks(face_landmarks_data)
+
+    # 顔検出のスコアを計算
+    #_, score = face_data
+    #print(f"✅MLモデルが顔を検出し、ランドマークを計算しました。score={score: .2f}")
+    #return landmarks
+
+    bbox, score = face_data
+    xmin, ymin, xmax, ymax = bbox
+
+# APIエンドポイントの作成
 @app.get("/")
 def read_root():
     return RedirectResponse(url="/docs")
 
-# --- 機能①：画像アップロードとランドマーク処理 ---
+# 画像アップロードとランドマーク処理(担当：高井良)
 @app.post("/upload_and_detect", tags=["1. Image Upload & Landmark Detection"])
 async def upload_and_detect_landmarks(file: UploadFile = File(...)):
     upload_image_id = str(uuid.uuid4())
@@ -168,40 +288,41 @@ async def upload_and_detect_landmarks(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
     
     # MLモデル（顔枠）からランドマークを推定
-    landmarks = get_landmarks_from_face(original_image_path)
+    centers, meta = get_landmarks_from_face(original_image_path)
     
-    # もしMLが失敗したら、フォールバックとして従来のダミーロジックを使う
-    if landmarks is None:
-        print("ML検出失敗。ダミーロジックで代替します。")
-        # 以前のダミー関数を呼び出す（関数名を変更）
-        landmarks = detect_landmarks_dummy_fallback(original_image_path)
-        if landmarks is None: # 万が一ダミーも失敗した場合
-            raise HTTPException(status_code=400, detail="Failed to process image.")
+    # もしMLが失敗したら、エラー表示
+    if centers is None:
+        print("ML検出失敗")
+        centers = detect_landmarks_failure(original_image_path)
+        meta = None
 
-    image_landmark_storage[upload_image_id] = landmarks
+    if centers is None:
+        raise HTTPException(status_code=400, detail="ML検出失敗")
     
-    ID_ACCESS_LOG[upload_image_id] = time.time()
+    # centersとmetaをtemp/<upload_id>/landmarks.jsonに保存
+    landmarks_unity = {"centers": centers, "meta": meta}
+    landmarks_JSON_path = os.path.join(upload_temp_dir, "landmarks.json")
+    with open(landmarks_JSON_path, "w", encoding="utf-8") as f:
+        json.dump(landmarks_unity, f, ensure_ascii=False)
     
+    # 勝手に足しました:みうら
+    ID_ACCESS_LOG[upload_image_id] = time.time() # アクセス履歴を残す
+    #
+
     return JSONResponse(content={"upload_image_id": upload_image_id})
 
-def detect_landmarks_dummy_fallback(image_path: str) -> Dict:
-    """ML失敗時のフォールバック用ダミー関数（元コードと同じ）"""
+def detect_landmarks_failure(image_path: str) -> Dict:
+    # ダミー関数は消した
     try:
         with Image.open(image_path) as img:
-            width, height = img.size
-            center_x, center_y = width // 2, height // 2
-            return {
-                "left_eye": {"x": 150, "y": 230},
-                "right_eye": {"x": 250, "y": 270},
-                "nose": {"x": 200, "y": 210},
-                "forehead": {"x": 200, "y": 120}
-            }
+            print("❌顔検出失敗")
+            return None
+
+    # 画像ファイルが開けなかった時用   
     except Exception:
         return None
 
-# #################################################
-# ## 機能②：スタンプ情報の取得 (ロジック変更)
-# #################################################
+# スタンプ情報の取得(担当：西本)
 @app.post("/get_stamp_info", tags=["2. Get Stamp Info"])
 # ★★★ 引数名と型を元に戻しました ★★★
 async def get_stamp_info(data: StampRequestData):
@@ -221,7 +342,7 @@ async def get_stamp_info(data: StampRequestData):
     if not os.path.exists(stamp_path):
         raise HTTPException(
             status_code=404,
-            detail=f"Stamp asset '{data.stamp_id}' not found on server."
+            detail=f"Stamp asset '{data.stamp_id}' not found on server. Tried path: {stamp_path}"
         )
 
     # Base64化して、フロントが直接<img src="...">に使える形にする
@@ -230,17 +351,20 @@ async def get_stamp_info(data: StampRequestData):
 
     stamp_config = STAMP_PLACEMENT_RULES.get(data.stamp_id)
 
+    # 登録されていないスタンプIDが送られてきたときはエラーを返す
     if not stamp_config:
-        nose_landmark = landmarks.get("nose", {"x": 100, "y": 100})
-        return JSONResponse(content={
-            "stamp_id": data.stamp_id, "x": nose_landmark["x"], "y": nose_landmark["y"], "scale": 1, "stamp_image": stamp_image_b64
-        })
+        raise HTTPException(
+            status_code=404,
+            detail=f"登録されていないスタンプIDです。送られてきたIDは'{data.stamp_id}'です。"
+        )
 
     stamp_type = stamp_config["type"]
     
-    for required in stamp_config["required_landmarks"]:
-        if required not in landmarks:
-            raise HTTPException(status_code=400, detail=f"Required landmark '{required}' not found for this stamp.")
+    # 必要なランドマークがないときにエラーを返す
+    if "required_landmarks" in stamp_config:
+        for required in stamp_config["required_landmarks"]:
+            if required not in landmarks:
+                raise HTTPException(status_code=400, detail=f"このスタンプに必要なランドマーク'{required}'が見つかりませんでした。")
 
     x, y, needed_width_px = 0, 0, 100
 
@@ -262,12 +386,25 @@ async def get_stamp_info(data: StampRequestData):
         nose_landmark = landmarks["nose"]
         x, y = nose_landmark["x"], nose_landmark["y"]
         needed_width_px = 50  # 鼻スタンプは固定気味
+
+    elif stamp_type == "gantai":
+        # 左目の眼帯だけ設定しました
+        left_eye_landmark = landmarks["left_eye"]
+        x, y = left_eye_landmark["x"], left_eye_landmark["y"]
+        # サイズは目と目の距離の0.8倍にしました
+        eye_dist = abs(landmarks["right_eye"]["x"] - landmarks["left_eye"]["x"])
+        needed_width_px = eye_dist * 0.8
+        
     # 基準幅から倍率を計算
-    base_width_px = STAMP_BASE_WIDTHS.get(data.stamp_id, 100)
+    base_width_px = STAMP_PX.get(data.stamp_id, 100)
     if base_width_px <= 0:
         base_width_px = 100
     scale = needed_width_px / base_width_px
     
+    # 勝手に足しました:みうら
+    ID_ACCESS_LOG[data.upload_image_id] = time.time() # アクセス履歴を更新
+    #
+
     return JSONResponse(content={
         "stamp_id": data.stamp_id,
         "x": x,
