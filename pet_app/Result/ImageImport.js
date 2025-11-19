@@ -29,7 +29,8 @@ function ImageImport(files){
       sessionStorage.setItem("ID", userID);       //ユーザー自身でIDを保持
       console.log(userID);
 
-      //ここでスタンプごとのオンオフ状況を得るリストを生成して、全部オフで初期化しちゃおう
+      const OnEffect = [];                                        //有効化しているエフェクトを持つリスト
+      sessionStorage.setItem("OnEffect",JSON.stringify(OnEffect)) //エフェクトの有効化状況を保存
 
       //描画箇所に保存した画像を描画する
       const ImageSpace = document.getElementById('ImageSpace');   //描画領域となるcanvasを指定
@@ -58,4 +59,4 @@ function ImageImport(files){
 	}
 }
 
-//strage: ID, Img
+//strage: ID, OnEffect, Img
