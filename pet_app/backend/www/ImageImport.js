@@ -42,7 +42,7 @@ function ImageImport(files){
       Img.src = event.target.result;                              //画像読み込み開始　こいつは処理が長い
 
       Img.onload = () => {                                        //画像読み込み終わった後の処理
-        const scale = 0;
+        let scale = 0;
         if(Img.width <= Img.height){                              //画像が縦長か横長かによって、幅を合わせる方を変更
           scale = ImageSpace.height/Img.height;
           ImageSpace.setAttribute('width', Img.width*scale)
