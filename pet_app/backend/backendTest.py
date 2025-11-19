@@ -333,15 +333,14 @@ async def get_stamp_info(data: StampRequestData):
     ↓
     　 スタンプの名前とエフェクトを貼る位置とサイズを返す
     """
-centers = None
-    try:
-        upload_dir = os.path.join(TEMP_DIR, data.upload_image_id)
-        json_path = os.path.join(upload_dir, "landmarks.json")
-        with open(json_path, "r", encoding="utf-8") as f:
-            loaded = json.load(f)
-            centers = loaded["centers"]
-    except:
-        raise HTTPException(status_code=404, detail="ランドマークが読み込めませんでした")
+    # temp/<upload_image_id>/landmarks.jsonからランドマークを取得
+    landmarks_unity = os.path.join(TEMP_DIR, data.upload_image_id, "landmarks.json")
+    if not os.path.exists(landmarks_unity):
+        raise HTTPException(status_code=404, detail="Upload Image IDが見つかりませんでした。")
+    with open(landmarks_unity, "r", encoding="utf-8") as f:
+        unity = json.load(f)
+    centers = unity.get("centers")
+    meta = unity.get("meta")
 
     # centers = { left_eye:{x,y}, right_eye:{x,y}, nose:{x,y}, mouth:{x,y} }
     try:
@@ -355,6 +354,8 @@ centers = None
     # -----------------------------
     # 2) スタンプ画像読み込み
     # -----------------------------
+
+# 2) スタンプ画像ファイルを www/<stamp_id> から読む
     stamp_path = os.path.join(WWW_DIR, data.stamp_id + ".png")
     if not os.path.exists(stamp_path):
         raise HTTPException(status_code=404, detail=f"スタンプ画像が見つかりません: {stamp_path}")
@@ -449,7 +450,6 @@ centers = None
 # =========================================================
 @app.post("/upload_static_files", tags=["0. Frontend Static Upload"])
 async def upload_static_files(files: List[UploadFile] = File(...)):
-    
     
     saved_urls: List[str] = []
 
