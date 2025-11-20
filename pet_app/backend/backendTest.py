@@ -385,10 +385,10 @@ async def get_stamp_info(data: StampRequestData):
     y_top  = eye_center_y - needed_width_px/2
 
     if stamp_type == "glasses":
-        # ● メガネ位置
-        needed_width_px = eye_dist * 1.6
-        x_left = le["x"] - eye_dist * 0.35
-        y_top  = eye_center_y - eye_dist * 0.35
+    needed_width_px = eye_dist * 1.6
+    x_left = eye_center_x - needed_width_px / 2
+    offset_y = eye_dist * 0.1   # 好みで 0.0〜0.2 あたりを調整
+    y_top = eye_center_y - needed_width_px / 2 - offset_y
 
     elif stamp_type == "hat":
         # ● 帽子（頭の上に乗る）
