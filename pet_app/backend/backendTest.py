@@ -385,17 +385,22 @@ async def get_stamp_info(data: StampRequestData):
     y_top  = eye_center_y - needed_width_px/2
 
     if stamp_type == "glasses":
-        # ● メガネ位置
-        needed_width_px = eye_dist * 1.6
-        x_left = le["x"] - eye_dist * 0.35
-        y_top  = eye_center_y - eye_dist * 0.35
+        needed_width_px = eye_dist * 2.0
+        aspect = stamp_h / stamp_w               # 元画像の h / w
+        glasses_h = needed_width_px * aspect 
+        x_left = eye_center_x - needed_width_px / 2
+        center_offset_y = eye_dist * 0.05 
+        y_top = (eye_center_y + center_offset_y) - glasses_h / 2
 
     elif stamp_type == "hat":
         # ● 帽子（頭の上に乗る）
-        needed_width_px = eye_dist * 2.4
-        x_left = le["x"] - eye_dist * 0.7
-        y_top  = eye_center_y - eye_dist * 1.9   # 大きめに上へ
-
+        needed_width_px = eye_dist * 3.0
+        aspect = stamp_h / stamp_w          # 元画像の h / w
+        stamp_h_scaled = needed_width_px * aspect
+        x_left = eye_center_x - needed_width_px / 2
+        GLASS_CENTER_RATIO = 0.35           # ← 見た目を見て 0.3〜0.4 で調整
+        y_top = eye_center_y - stamp_h_scaled * GLASS_CENTER_RATIO
+        
     elif stamp_type == "gantai":
         # ● 眼帯（左目が基準）
         needed_width_px = eye_dist * 1.2
