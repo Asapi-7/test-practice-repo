@@ -13,9 +13,6 @@ function ImageImport(files){
             method: 'POST',                                   //これはPOSTメソッドです
             body: formData                                    //実際に送るデータです
           });
-          if(!response.ok){
-            throw new Error('返答が芳しくなかった');
-          }
           const result = await response.json();
           return result;
         }catch(error){
@@ -25,6 +22,13 @@ function ImageImport(files){
       }
     
       const result = await sendUserImage(file);   //手紙を送って、返信を格納できるまで少し待つ
+      
+      if(result.detail){
+          console.log("エラーってるよ!backで!");
+          alert(result.detail);
+          return;
+      }
+
       const userID = result["upload_image_id"];   //返答からIDの情報を取る
       sessionStorage.setItem("ID", userID);       //ユーザー自身でIDを保持
       console.log(userID);
