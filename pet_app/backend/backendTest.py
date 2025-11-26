@@ -31,7 +31,7 @@ import json
 # あいちゃんここまで
 
 # あさひちゃんのモデル
-from .detect_bbx_lndmk import build_faster_rcnn_model, DEVICE, detect_bbx_and_lndmk
+from .detect import load_ml_model, detect_face_and_lndmk
 # あさひちゃんここまで
 
 def encode_image_to_base64(image_path: str) -> str:
@@ -45,12 +45,8 @@ ID_ACCESS_LOG = {}
 async def lifespan(app: FastAPI):
     # サーバー起動時にMLモデルをロードする
 
-    # あいちゃんのモデル
-    # load_ml_model()
-    # あいちゃんここまで
+    load_ml_model()
 
-    # あさひちゃんのモデルはimport時に自動でロードされるから何も書かなくて大丈夫
-    
     task = asyncio.create_task(cleanup_id())
     yield
     task.cancel()
@@ -197,7 +193,7 @@ def get_center_landmarks(points: List[List[float]], bbox: List[float]) -> Dict:
 
     # 頭の中心座標を計算
     head_x = (bbox[0] + bbox[2]) / 2
-    head_y = bbox[1]
+    head_y = bbox[1] + ((bbox[3] - bbox[1]) / 2) #上辺のy座標+(縦幅/2)
 
     # 右目、左目、鼻、口、頭をランドマーク辞書にする
     parts_landmarks = {
@@ -208,6 +204,7 @@ def get_center_landmarks(points: List[List[float]], bbox: List[float]) -> Dict:
         "head": {"x": int(head_x), "y": int(head_y)}
     }
     return parts_landmarks
+# あさひちゃんここまで
 
 def detect_landmarks_text(image_path: str):
     """
@@ -253,12 +250,12 @@ def detect_landmarks_text(image_path: str):
     # except Exception:
     #     return face_data, None
     
-    # あさひちゃんのモデル
-    # detect_bbx_and_lndmk は [[xmin, ymin], [xmax, ymax], [lx1, ly1], ..., [lx9, ly9]] を返す
-    result = detect_bbx_and_lndmk(image_path, score_threshold=0.05) # 閾値0.05にしちゃった
+    # あさひちゃんのモデル（detect.py使用）
+    # detect_face_and_lndmk は [[xmin, ymin], [xmax, ymax], [lx1, ly1], ..., [lx9, ly9]] を返す
+    result = detect_face_and_lndmk(image_path, score_threshold=0.05) # 閾値0.05にしちゃった
     
     if result is None or len(result) < 11:  # bbox(2点) + landmarks(9点) = 11点
-        print("⚠️ detect_bbx_and_lndmk が顔を検出できませんでした。")
+        print("⚠️ detect_face_and_lndmk が顔を検出できませんでした。")
         return None, None
         
     # バウンディングボックス情報を抽出
@@ -274,6 +271,7 @@ def detect_landmarks_text(image_path: str):
     
     face_data = (bbox, score)
     return face_data, landmarks
+# あさひちゃんここまで
 
 # 画像からランドマークを検出する
 def get_landmarks_from_face(image_path: str) -> Dict | None:
