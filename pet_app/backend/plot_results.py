@@ -7,6 +7,9 @@ BBOX_COLOR = 'green'
 POINT_SIZE = 10
 LINE_WIDTH = 3
 
+# image_path (str): 描画対象の画像ファイルへのパス
+# results: 予測結果データ ( detect_face_and_lndmk関数が返す値 )
+# output_path (str): 描画結果の画像を保存するファイルパス
 def plot_results_and_save(image_path: str, results, output_path: str):
     try:
         img_pil = Image.open(image_path).convert("RGB")
