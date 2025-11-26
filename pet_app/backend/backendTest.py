@@ -137,15 +137,14 @@ class StampRequestData(BaseModel):
 #     points = []
 #     pattern = re.compile(r'(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)')# 整数・小数・負の値を含む数値2つがある行を座標データとする
 
-    # テキスト全体を走査
-    for line in landmaek_text.splitlines():
-        match = pattern.search(line.strip())
-        if match :
-            x = float(match.group(1))
-            y = float(match.group(2))
-            points.append([x, y])
-
-    return points
+    # # テキスト全体を走査
+    # for line in landmaek_text.splitlines():
+    #     match = pattern.search(line.strip())
+    #     if match :
+    #         x = float(match.group(1))
+    #         y = float(match.group(2))
+    #         points.append([x, y])
+    # return points
 
 # # ランドマークから中心座標を計算する
 # # テキストデータはpoint0~8に行ごとに分かれてる。それぞれのpointに入ってる2つのデータに名前をつける。
