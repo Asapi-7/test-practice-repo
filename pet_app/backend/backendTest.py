@@ -144,7 +144,6 @@ class StampRequestData(BaseModel):
     #         x = float(match.group(1))
     #         y = float(match.group(2))
     #         points.append([x, y])
-
     # return points
 
 # # ランドマークから中心座標を計算する
