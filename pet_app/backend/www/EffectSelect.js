@@ -12,7 +12,7 @@ async function EffectSelect(effectName){
             const result = await response.json();
             return result;
         }catch(error){
-            console.error('送れなかったよ:',error.message);
+            console.error('送れなかったよ:',error);
             return null
             }
         }
