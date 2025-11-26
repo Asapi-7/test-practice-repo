@@ -134,10 +134,7 @@ def landmark_text_to_list(landmaek_text: str) -> List[List[float]]:
             x = float(match.group(1))
             y = float(match.group(2))
             points.append([x, y])
-    
-    if len(points) != 9:
-        print(f"ランドマークが９点ありません（検出数: {len(points)}）")
-    
+
     return points
 
 # ランドマークから中心座標を計算する
@@ -233,10 +230,6 @@ def get_landmarks_from_face(image_path: str) -> Dict | None:
         print("❌ランドマークのパースに失敗しました。")
         return None, None
 
-    if len(face_landmarks_data) != 9:
-        print(f"❌ランドマークは９点必要です。検出数: {len(face_landmarks_data)}")
-        # 9点でない場合も近似を作るか None を返すかは要件次第。ここでは失敗扱いにする
-        return None, None
 
     centers = get_center_landmarks(face_landmarks_data)
 
@@ -292,11 +285,6 @@ async def upload_and_detect_landmarks(file: UploadFile = File(...)):
     
     # もしMLが失敗したら、エラー表示
     if centers is None:
-        print("ML検出失敗")
-        centers = detect_landmarks_failure(original_image_path)
-        meta = None
-
-    if centers is None:
         raise HTTPException(status_code=400, detail="ML検出失敗")
     
     # centersとmetaをtemp/<upload_id>/landmarks.jsonに保存
@@ -311,16 +299,6 @@ async def upload_and_detect_landmarks(file: UploadFile = File(...)):
 
     return JSONResponse(content={"upload_image_id": upload_image_id})
 
-def detect_landmarks_failure(image_path: str) -> Dict:
-    # ダミー関数は消した
-    try:
-        with Image.open(image_path) as img:
-            print("❌顔検出失敗")
-            return None
-
-    # 画像ファイルが開けなかった時用   
-    except Exception:
-        return None
 
 # スタンプ情報の取得(担当：西本)
 @app.post("/get_stamp_info", tags=["2. Get Stamp Info"])
@@ -336,7 +314,7 @@ async def get_stamp_info(data: StampRequestData):
     # temp/<upload_image_id>/landmarks.jsonからランドマークを取得
     landmarks_unity = os.path.join(TEMP_DIR, data.upload_image_id, "landmarks.json")
     if not os.path.exists(landmarks_unity):
-        raise HTTPException(status_code=404, detail="Upload Image IDが見つかりませんでした。")
+        raise HTTPException(status_code=404, detail="長時間操作が無かったため、接続が切れました。再度画像を選択してください。")
     with open(landmarks_unity, "r", encoding="utf-8") as f:
         unity = json.load(f)
     centers = unity.get("centers")
@@ -356,7 +334,7 @@ async def get_stamp_info(data: StampRequestData):
     # -----------------------------
 
 # 2) スタンプ画像ファイルを www/<stamp_id> から読む
-    stamp_path = os.path.join(WWW_DIR, data.stamp_id + ".png")
+    stamp_path = os.path.join(WWW_DIR, "effect/" + data.stamp_id + ".png")
     if not os.path.exists(stamp_path):
         raise HTTPException(status_code=404, detail=f"スタンプ画像が見つかりません: {stamp_path}")
 
