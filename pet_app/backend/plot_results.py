@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from PIL import Image
 import numpy as np
+import io
 
 LANDMARK_COLOR = 'red'
 BBOX_COLOR = 'green'
@@ -9,13 +10,13 @@ LINE_WIDTH = 3
 
 # image_path (str): 描画対象の画像ファイルへのパス
 # results: 予測結果データ ( detect_face_and_lndmk関数が返す値 )
-# output_path (str): 描画結果の画像を保存するファイルパス
-def plot_results_and_save(image_path: str, results, output_path: str):
+# 返り値は Imageオブジェクト
+def plot_results(image_path: str, results, output_path: str):
     try:
         img_pil = Image.open(image_path).convert("RGB")
     except FileNotFoundError:
         print(f"❌ 画像ファイルが見つかりません: {image_path}")
-        return
+        return None
 
     #BBoxとランドマーク座標の取得
     bbox_min = results[0]
@@ -40,7 +41,13 @@ def plot_results_and_save(image_path: str, results, output_path: str):
     plt.scatter(landmarks[:, 0], landmarks[:, 1], c=LANDMARK_COLOR, s=POINT_SIZE, zorder=10)
     
     plt.axis('off') 
-    
-    # 4. 画像を保存
-    plt.savefig(output_path, bbox_inches='tight', pad_inches=0.1)
+
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png', bbox_inches='tight', pad_inches=0.0)
+
     plt.close()
+
+    buffer.seek(0)
+    img_plotted = Image.open(buffer).convert("RGB")
+
+    return img_plotted
