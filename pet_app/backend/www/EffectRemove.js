@@ -10,7 +10,7 @@ async function EffectRemove(effectName){
     const Img = new Image();
     Img.src = JSON.parse(sessionStorage.getItem("Img"));        //画像読み込み開始
 
-    Img.onload = () => {                                        //画像読み込み終わった後の処理
+    Img.onload = async () => {                                        //画像読み込み終わった後の処理
         context.clearRect(0,0,ImageSpace.clientWidth,ImageSpace.clientHeight);  //一回全消し
         if(Img.width <= Img.height){                                            //元画像描画し直し
           const scale = ImageSpace.height/Img.height;
@@ -21,10 +21,10 @@ async function EffectRemove(effectName){
           ImageSpace.setAttribute('height', Img.height*scale)
           context.drawImage(Img, 0, 0, Img.width*scale, Img.height*scale);
         }                                                                       //ここまでで元画像描画完了
-        for(const i=0; i<RegenerateEffect.length; i++){                         //再度エフェクトを描画し直す
-            EffectSelect(RegenerateEffect[i]);
+        for(let i=0; i<RegenerateEffect.length; i++){                         //再度エフェクトを描画し直す
+            await EffectSelect(RegenerateEffect[i]);
         }
     }
 }
 
-//strage: ID, OnEffect, UserImageScale, Img
+//strage: ID, OnEffect, UserImageScale, Img, AnotherImg

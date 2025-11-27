@@ -56,4 +56,4 @@ async function EffectSelect(effectName){
 }
 
 //UserImageScaleが加工する画像の倍率です
-//strage: ID, OnEffect, UserImageScale, Img
+//strage: ID, OnEffect, UserImageScale, Img, AnotherImg

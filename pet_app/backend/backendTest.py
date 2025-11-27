@@ -12,7 +12,8 @@ from fastapi.responses import JSONResponse, RedirectResponse
 # 勝手に足しました：みうら
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
-import asyncio, time, shutil
+import asyncio, time, shutil, io
+from backend.plot_results import plot_results
 #
 
 from pydantic import BaseModel
@@ -27,11 +28,11 @@ import json
 
 # モデルを切り替える時は、ここと45行目を書き換える
 # あいちゃんのモデル
-#from .ml_model import detect_face, load_ml_model
+#from backend.ml_model import detect_face, load_ml_model
 # あいちゃんここまで
 
 # あさひちゃんのモデル
-from .detect import load_ml_model, detect_face_and_lndmk
+from backend.detect import load_ml_model, detect_face_and_lndmk
 # あさひちゃんここまで
 
 def encode_image_to_base64(image_path: str) -> str:
@@ -39,7 +40,9 @@ def encode_image_to_base64(image_path: str) -> str:
         encoded_bytes = base64.b64encode(image_file.read())
         return f"data:image/png;base64,{encoded_bytes.decode('utf-8')}"
 
+# 勝手に足しました：みうら
 ID_ACCESS_LOG = {}
+#
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -82,8 +85,8 @@ os.makedirs(TEMP_DIR, exist_ok=True)
 
 # フロントエンドの静的ファイルを保存するためのwwwディレクトリを作成
 # 例: pet.html, EffectSelect.js, ImageDownload.js, ImageImport.js
-WWW_DIR = "www"
-os.makedirs(WWW_DIR, exist_ok=True)
+BASE_DIR = os.path.dirname(__file__)  # backendTest.py がある場所
+WWW_DIR = os.path.join(BASE_DIR, "www")  # backend/www を指定
 
 # /static 配下で www/ のファイルを公開 fastAPI動かす用
 # -> http://localhost:8000/static/pet.html で pet.html が見える
@@ -266,7 +269,7 @@ def detect_landmarks_text(image_path: str):
     landmarks = result[2:11]  # インデックス2から10まで（9点）
     
     face_data = (bbox, score)
-    return face_data, landmarks
+    return face_data, landmarks, result
 # あさひちゃんここまで
 
 # 画像からランドマークを検出する
@@ -277,7 +280,7 @@ def get_landmarks_from_face(image_path: str) -> Dict | None:
     # あいちゃんここまで
 
     # あさひちゃんのモデル
-    face_data, face_landmarks_data = detect_landmarks_text(image_path)
+    face_data, face_landmarks_data, result = detect_landmarks_text(image_path)
     # あさひちゃんここまで
     
     # 顔検出ができなかった時
@@ -289,7 +292,7 @@ def get_landmarks_from_face(image_path: str) -> Dict | None:
     if face_data is None or face_landmarks_data is None:
     # あさひちゃんここまで
         print("❌ MLモデルが顔を検出できませんでした。")
-        return None, None
+        return None, None, None
     
     # # あいちゃんのモデル
     # # ランドマーク文字列またはリストから座標リストを作る
@@ -336,7 +339,7 @@ def get_landmarks_from_face(image_path: str) -> Dict | None:
         "score": score
     }
     # 戻り値: (centers, meta)
-    return centers, meta
+    return centers, meta, result
 
     # 顔検出はできたけど、ランドマークのテキストデータがおかしい時
     # 顔検出はできたけど、ランドマーク数が足りない時
@@ -368,7 +371,7 @@ async def upload_and_detect_landmarks(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
     
     # MLモデル（顔枠）からランドマークを推定
-    centers, meta = get_landmarks_from_face(original_image_path)
+    centers, meta, result = get_landmarks_from_face(original_image_path)
     
     # もしMLが失敗したら、エラー表示
     if centers is None:
@@ -382,9 +385,17 @@ async def upload_and_detect_landmarks(file: UploadFile = File(...)):
     
     # 勝手に足しました:みうら
     ID_ACCESS_LOG[upload_image_id] = time.time() # アクセス履歴を残す
-    #
 
-    return JSONResponse(content={"upload_image_id": upload_image_id})
+    landmark_plot = plot_results(original_image_path, result)
+    buf = io.BytesIO()                      #データ変換の保存先生成
+    landmark_plot.save(buf, format="PNG")   #保存
+    buf.seek(0)                             #保存終わったから先頭に戻す(フィルムを先頭に戻す感じ？)
+    landmark_plot_b64 = base64.b64encode(buf.getvalue()).decode()
+    landmark_plot_uri = f"data:image/png;base64,{landmark_plot_b64}"
+
+    return JSONResponse(content={
+        "upload_image_id": upload_image_id,
+        "landmark_plot": landmark_plot_uri})
 
 
 # スタンプ情報の取得(担当：西本)

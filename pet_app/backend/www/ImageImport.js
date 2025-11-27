@@ -31,7 +31,13 @@ function ImageImport(files){
 
       const userID = result["upload_image_id"];   //返答からIDの情報を取る
       sessionStorage.setItem("ID", userID);       //ユーザー自身でIDを保持
+      const landmark_plot = new Image();
+      landmark_plot.src = result["landmark_plot"];   //返答からIDの情報を取る
+      landmark_plot.onload = () => {
+        sessionStorage.setItem("AnotherImg", JSON.stringify(result["landmark_plot"]));       //ユーザー自身でIDを保持
+      }
       console.log(userID);
+      console.log(landmark_plot);
 
       const OnEffect = [];                                        //有効化しているエフェクトを持つリスト
       sessionStorage.setItem("OnEffect",JSON.stringify(OnEffect)) //エフェクトの有効化状況を保存
@@ -65,4 +71,4 @@ function ImageImport(files){
 	}
 }
 
-//strage: ID, OnEffect, UserImageScale, Img
+//strage: ID, OnEffect, UserImageScale, Img, AnotherImg
