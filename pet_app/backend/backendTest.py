@@ -123,11 +123,18 @@ STAMP_PX = {
     "bousi": 1280,
     "chouchou": 1280,
     "dokuro": 1280,
-    "glasses": 577,
+    "glasses": 1280,
     "kanmuri": 1280,
     "mimi": 1280,
     "sangurasu": 1280,
 }
+
+# glasses.png 内のレンズ中心座標（元画像 1280x1280 基準）
+GLASS_L_CX = 367  # 左レンズ中心 x
+GLASS_L_CY = 636  # 左レンズ中心 y
+GLASS_R_CX = 926  # 右レンズ中心 x
+GLASS_R_CY = 636  # 右レンズ中心 y
+
 
 # ユーザーからサーバーへのデータ形式を定義
 class StampRequestData(BaseModel):
@@ -251,6 +258,7 @@ def detect_landmarks_text(image_path: str):
     
     # あさひちゃんのモデル（detect.py使用）
     # detect_face_and_lndmk は [[xmin, ymin], [xmax, ymax], [lx1, ly1], ..., [lx9, ly9]] を返す
+    
     result = detect_face_and_lndmk(image_path, score_threshold=0.05) # 閾値0.05にしちゃった
     
     if result is None or len(result) < 11:  # bbox(2点) + landmarks(9点) = 11点
@@ -460,14 +468,27 @@ async def get_stamp_info(data: StampRequestData):
     needed_width_px = eye_dist * 1.8   # だいたいいい感じの大きさ
     x_left = eye_center_x - needed_width_px/2
     y_top  = eye_center_y - needed_width_px/2
-
+    
     if stamp_type == "glasses":
-        needed_width_px = eye_dist * 2.0
-        aspect = stamp_h / stamp_w               # 元画像の h / w
-        glasses_h = needed_width_px * aspect 
-        x_left = eye_center_x - needed_width_px / 2
-        center_offset_y = eye_dist * 0.05 
-        y_top = (eye_center_y + center_offset_y) - glasses_h / 2
+        lens_gap_src = GLASS_R_CX - GLASS_L_CX   # 1280画像内でのレンズ中心間距離
+        eye_dist = abs(re["x"] - le["x"])        # 画像上の左右の目の距離（横方向だけでOK）
+
+        # どれくらい拡大/縮小するか
+        scale = eye_dist / lens_gap_src
+
+        # スタンプ画像全体のスケーリング後サイズ（参考値）
+        needed_width_px  = stamp_w * scale
+        needed_height_px = stamp_h * scale
+
+        # 左レンズの中心を左目の位置に合わせる
+        eye_center_y = (le["y"] + re["y"]) / 2
+
+        # 少しだけ下にずらしたいならここを調整（0 〜 0.2 * eye_dist くらい）
+        center_offset_y = eye_dist * 0.05
+
+        # 左上座標 = 目の座標 - (レンズ中心の座標 * scale)
+        x_left = le["x"] - scale * GLASS_L_CX
+        y_top  = (eye_center_y + center_offset_y) - scale * GLASS_L_CY
 
     elif stamp_type == "hat":
         # ● 帽子（頭の上に乗る）
@@ -497,8 +518,10 @@ async def get_stamp_info(data: StampRequestData):
     if base_width_px <= 0:
         base_width_px = stamp_w
 
-    scale = needed_width_px / base_width_px
-
+     # glasses 以外はここで scale を計算
+    if stamp_type != "glasses":
+        scale = needed_width_px / base_width_px
+        
     x_int = max(0, int(x_left))
     y_int = max(0, int(y_top))
 
