@@ -323,7 +323,7 @@ def get_landmarks_from_face(image_path: str) -> Dict | None:
             bbox, score = None, None
     
     elif USE_MORI_MODEL or USE_MIZUNUMA_MODEL:
-        face_data, face_landmarks_data, result = detect_landmarks_text(image_path)
+        face_data, face_landmarks_data = detect_landmarks_text(image_path)
         
         # 顔検出ができなかった時
         if face_data is None or face_landmarks_data is None:
@@ -383,7 +383,7 @@ async def upload_and_detect_landmarks(file: UploadFile = File(...)):
     
     # MLの推論時間を表示
     ml_start_time = time.time()
-    centers, meta, result = get_landmarks_from_face(original_image_path)
+    centers, meta = get_landmarks_from_face(original_image_path)
     ml_end_time = time.time()
     print(f"ML推論時間: {(ml_end_time - ml_start_time) * 1000:.2f}ms")
     
@@ -400,7 +400,7 @@ async def upload_and_detect_landmarks(file: UploadFile = File(...)):
     # 勝手に足しました:みうら
     ID_ACCESS_LOG[upload_image_id] = time.time() # アクセス履歴を残す
 
-    landmark_plot = plot_results(original_image_path, result)
+    landmark_plot = plot_results(original_image_path, meta["raw_points"])
     buf = io.BytesIO()                      #データ変換の保存先生成
     landmark_plot.save(buf, format="PNG")   #保存
     buf.seek(0)                             #保存終わったから先頭に戻す(フィルムを先頭に戻す感じ？)
@@ -464,7 +464,7 @@ async def get_stamp_info(data: StampRequestData):
     # 2) スタンプ画像読み込み
     # -----------------------------
 
-# 2) スタンプ画像ファイルを www/<stamp_id> から読む
+# 2) スタンプ画像ファイルを www/<stamp_id> から読む!
     stamp_path = os.path.join(WWW_DIR, "effect/" + data.stamp_id + ".png")
     if not os.path.exists(stamp_path):
         raise HTTPException(status_code=404, detail=f"スタンプ画像が見つかりません: {stamp_path}")
