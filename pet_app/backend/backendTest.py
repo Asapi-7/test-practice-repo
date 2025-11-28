@@ -111,7 +111,7 @@ STAMP_PLACEMENT_RULES = {
         "type": "hat"
     },
     "mimi": {
-        "type": "hat"
+        "type": "mimi"
     },
     "dokuro": {
         "type": "gantai"
@@ -496,30 +496,36 @@ async def get_stamp_info(data: StampRequestData):
     if stamp_type == "glasses":
         eye_center_x = (le["x"] + re["x"]) / 2
         eye_center_y = (le["y"] + re["y"]) / 2
-        needed_width_px = face_w * 0.65
+        needed_width_px = face_w * 0.85
         aspect = stamp_h / stamp_w
         glasses_h_scaled = needed_width_px * aspect
         x_left = eye_center_x - needed_width_px / 2
         y_top  = eye_center_y - glasses_h_scaled / 2
 
     elif stamp_type == "hat":
-        # ● 帽子（リボン）：頭の上に乗せる
-        # 顔幅の1.2倍くらいの幅にする
         needed_width_px = face_w * 1.2
-
         aspect = stamp_h / stamp_w
         hat_h_scaled = needed_width_px * aspect
-
-        # 横方向：顔の中央
+        
         x_left = face_cx - needed_width_px / 2
+        head_x = head["x"]
+        head_y = head["y"]
+        y_top = head_y - hat_h_scaled * 1.3  # 大きくすると上にあがるよ
 
-        # 縦方向：帽子の「下端」が顔のbboxの上から少し下に来るように
-        bottom_y = y1 + face_h * 0.12   # 深くかぶせたいなら 0.15〜0.2 に
-        y_top = bottom_y - hat_h_scaled
+    elif stamp_type == "mimi":
+        needed_width_px = face_w * 1.2
+        aspect = stamp_h / stamp_w
+        mimi_h_scaled = needed_width_px * aspect
+        
+        x_left = face_cx - needed_width_px / 2
+        head_x = head["x"]
+        head_y = head["y"]
+        y_top = head_y - mimi_h_scaled * 1.7   # 大きくすると上にあがるよ
+
 
     elif stamp_type == "gantai":
         # ● 眼帯（左目用）：顔の左寄りの目あたりに置く
-        needed_width_px = face_w * 0.32
+        needed_width_px = face_w * 0.60
         aspect = stamp_h / stamp_w
         patch_h_scaled = needed_width_px * aspect
         left_eye_cx = re["x"]
