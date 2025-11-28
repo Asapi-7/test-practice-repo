@@ -1,9 +1,14 @@
-async function EffectRemove(effectName){
-    //effectNameを元に、選択されたエフェクト画像を削除した画像を出力する
-    //画像の再生成には、EffectSelectを最大限活用している
+document.addEventListener("DOMContentLoaded", function() {  //画面更新時、sessionStorageを初期化する
+    sessionStorage.clear();
+});
+
+//土台の画像として使用するものを変えて、描画し直す
+async function ChangeUseImage(){
     const RegenerateEffect = JSON.parse(sessionStorage.getItem("OnEffect"));    //現時点で描画されているエフェクトを得る
-    RegenerateEffect = RegenerateEffect.filter(item => item !== effectName);    //今回削除するエフェクトだけ、配列から消す
     sessionStorage.setItem("OnEffect",JSON.stringify([]));                      //エフェクトを再度描画し直すため、一回有効化状況を空っぽに
+    const keep = sessionStorage.getItem("Img");
+    sessionStorage.setItem("Img", sessionStorage.getItem("AnotherImg"));
+    sessionStorage.setItem("AnotherImg", keep);
 
     const ImageSpace = document.getElementById('ImageSpace');   //描画領域となるcanvasを指定
     const context = ImageSpace.getContext('2d');                //2D描画用のコンテキストを取得

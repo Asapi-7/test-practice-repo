@@ -12,7 +12,8 @@ from fastapi.responses import JSONResponse, RedirectResponse
 # 勝手に足しました：みうら
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
-import asyncio, time, shutil
+import asyncio, time, shutil, io
+from backend.plot_results import plot_results
 #
 
 from pydantic import BaseModel
@@ -23,21 +24,32 @@ import base64
 #
 
 import re
-from .ml_model import detect_face, load_ml_model
 import json
+
+# モデルを切り替える時は、ここと45行目を書き換える
+# あいちゃんのモデル
+#from backend.ml_model import detect_face, load_ml_model
+# あいちゃんここまで
+
+# あさひちゃんのモデル
+from backend.detect import load_ml_model, detect_face_and_lndmk
+# あさひちゃんここまで
 
 def encode_image_to_base64(image_path: str) -> str:
     with open(image_path, "rb") as image_file:
         encoded_bytes = base64.b64encode(image_file.read())
         return f"data:image/png;base64,{encoded_bytes.decode('utf-8')}"
 
+# 勝手に足しました：みうら
 ID_ACCESS_LOG = {}
+#
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # サーバー起動時にMLモデルをロードする
+
     load_ml_model()
-    
+
     task = asyncio.create_task(cleanup_id())
     yield
     task.cancel()
@@ -73,8 +85,8 @@ os.makedirs(TEMP_DIR, exist_ok=True)
 
 # フロントエンドの静的ファイルを保存するためのwwwディレクトリを作成
 # 例: pet.html, EffectSelect.js, ImageDownload.js, ImageImport.js
-WWW_DIR = "www"
-os.makedirs(WWW_DIR, exist_ok=True)
+BASE_DIR = os.path.dirname(__file__)  # backendTest.py がある場所
+WWW_DIR = os.path.join(BASE_DIR, "www")  # backend/www を指定
 
 # /static 配下で www/ のファイルを公開 fastAPI動かす用
 # -> http://localhost:8000/static/pet.html で pet.html が見える
@@ -111,141 +123,223 @@ STAMP_PX = {
     "bousi": 1280,
     "chouchou": 1280,
     "dokuro": 1280,
-    "glasses": 577,
+    "glasses": 1280,
     "kanmuri": 1280,
     "mimi": 1280,
     "sangurasu": 1280,
 }
+
+# glasses.png 内のレンズ中心座標（元画像 1280x1280 基準）
+GLASS_L_CX = 367  # 左レンズ中心 x
+GLASS_L_CY = 636  # 左レンズ中心 y
+GLASS_R_CX = 926  # 右レンズ中心 x
+GLASS_R_CY = 636  # 右レンズ中心 y
+
 
 # ユーザーからサーバーへのデータ形式を定義
 class StampRequestData(BaseModel):
     upload_image_id: str
     stamp_id: str
 
-# ランドマーク９点の座標テキストデータをリストにする
-def landmark_text_to_list(landmaek_text: str) -> List[List[float]]:
-    points = []
-    pattern = re.compile(r'(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)')# 整数・小数・負の値を含む数値2つがある行を座標データとする
+# # あいちゃんのモデル
+# # ランドマーク９点の座標テキストデータをリストにする
+# def landmark_text_to_list(landmaek_text: str) -> List[List[float]]:
+#     points = []
+#     pattern = re.compile(r'(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)')# 整数・小数・負の値を含む数値2つがある行を座標データとする
 
-    # テキスト全体を走査
-    for line in landmaek_text.splitlines():
-        match = pattern.search(line.strip())
-        if match :
-            x = float(match.group(1))
-            y = float(match.group(2))
-            points.append([x, y])
-    
-    if len(points) != 9:
-        print(f"ランドマークが９点ありません（検出数: {len(points)}）")
-    
-    return points
+    # # テキスト全体を走査
+    # for line in landmaek_text.splitlines():
+    #     match = pattern.search(line.strip())
+    #     if match :
+    #         x = float(match.group(1))
+    #         y = float(match.group(2))
+    #         points.append([x, y])
+    # return points
 
-# ランドマークから中心座標を計算する
-# テキストデータはpoint0~8に行ごとに分かれてる。それぞれのpointに入ってる2つのデータに名前をつける。
-def get_center_landmarks(points: List[List[float]]) -> Dict:
-    right_eye_right_x, right_eye_right_y = points[0] # 右目右端
-    right_eye_left_x, right_eye_left_y = points[1] # 右目左端
-    left_eye_right_x, left_eye_right_y = points[2] # 左目右端
-    left_eye_left_x, left_eye_left_y = points[3] # 左目左端
-    nose_x, nose_y = points[4] # 鼻
-    mouth_right_x, mouth_right_y = points[5] # 口右端
-    mouth_left_x, mouth_left_y = points[6] # 口左端
-    nose_to_mouth_x, nose_to_mouth_y = points[7] # 鼻と口の間の点
-    mouth_center_x, mouth_center_y = points[8] # 口中央
+# # ランドマークから中心座標を計算する
+# # テキストデータはpoint0~8に行ごとに分かれてる。それぞれのpointに入ってる2つのデータに名前をつける。
+# def get_center_landmarks(points: List[List[float]]) -> Dict:
+#     right_eye_right_x, right_eye_right_y = points[0] # 右目右端
+#     right_eye_left_x, right_eye_left_y = points[1] # 右目左端
+#     left_eye_right_x, left_eye_right_y = points[2] # 左目右端
+#     left_eye_left_x, left_eye_left_y = points[3] # 左目左端
+#     nose_x, nose_y = points[4] # 鼻
+#     mouth_right_x, mouth_right_y = points[5] # 口右端
+#     mouth_left_x, mouth_left_y = points[6] # 口左端
+#     nose_to_mouth_x, nose_to_mouth_y = points[7] # 鼻と口の間の点
+#     mouth_center_x, mouth_center_y = points[8] # 口中央
 
+#     # 右目の中心座標を計算
+#     right_eye_x = (right_eye_right_x + right_eye_left_x) / 2
+#     right_eye_y = (right_eye_right_y + right_eye_left_y) / 2
+
+#     # 左目の中心座標を計算
+#     left_eye_x = (left_eye_right_x + left_eye_left_x) / 2
+#     left_eye_y = (left_eye_right_y + left_eye_left_y) / 2
+
+#     # 右目、左目、鼻、口をランドマーク辞書にする
+#     parts_landmarks = {
+#         "left_eye": { "x": int(left_eye_x), "y": int(left_eye_y)},
+#         "right_eye": { "x": int(right_eye_x), "y": int(right_eye_y)},
+#         "nose": { "x": int(nose_x), "y": int(nose_y)},
+#         "mouth": { "x": int(mouth_center_x), "y": int(mouth_center_y)}
+#     }
+#     return parts_landmarks
+# # あいちゃんここまで
+
+# あさひちゃんのモデル
+def get_center_landmarks(points: List[List[float]], bbox: List[float]) -> Dict:
     # 右目の中心座標を計算
-    right_eye_x = (right_eye_right_x + right_eye_left_x) / 2
-    right_eye_y = (right_eye_right_y + right_eye_left_y) / 2
+    right_eye_x = (points[0][0] + points[1][0]) / 2
+    right_eye_y = (points[0][1] + points[1][1]) / 2
 
     # 左目の中心座標を計算
-    left_eye_x = (left_eye_right_x + left_eye_left_x) / 2
-    left_eye_y = (left_eye_right_y + left_eye_left_y) / 2
+    left_eye_x = (points[2][0] + points[3][0]) / 2
+    left_eye_y = (points[2][1] + points[3][1]) / 2
 
-    # 右目、左目、鼻、口をランドマーク辞書にする
-    landmarks = {
-        "left_eye": { "x": int(left_eye_x), "y": int(left_eye_y)},
-        "right_eye": { "x": int(right_eye_x), "y": int(right_eye_y)},
-        "nose": { "x": int(nose_x), "y": int(nose_y)},
-        "mouth": { "x": int(mouth_center_x), "y": int(mouth_center_y)}
+    # 頭の中心座標を計算
+    head_x = (bbox[0] + bbox[2]) / 2
+    head_y = bbox[1] + ((bbox[3] - bbox[1]) / 2) #上辺のy座標+(縦幅/2)
+
+    # 右目、左目、鼻、口、頭をランドマーク辞書にする
+    parts_landmarks = {
+        "left_eye": {"x": int(left_eye_x), "y": int(left_eye_y)},
+        "right_eye": {"x": int(right_eye_x), "y": int(right_eye_y)},
+        "nose": {"x": int(points[4][0]), "y": int(points[4][1])},
+        "mouth": {"x": int(points[8][0]), "y": int(points[8][1])},
+        "head": {"x": int(head_x), "y": int(head_y)}
     }
-    return landmarks
+    return parts_landmarks
+# あさひちゃんここまで
 
 def detect_landmarks_text(image_path: str):
     """
-    detect_face を低閾値で呼ぶ。もし detect_face がランドマークを返さない場合は
+    ・あいちゃんのモデル
+      detect_face を低閾値で呼ぶ。もし detect_face がランドマークを返さない場合は
     bbox から簡易的に 9 点のランドマークを近似して返す（暫定対応）。
     戻り: (face_data, landmarks_list_or_text) where face_data==(bbox,score)
+    ・あさひちゃんのモデル
+      detect_bbx_and_lndmk を呼び出して、顔のバウンディングボックスとランドマーク9点を取得する。
+    戻り: (face_data, landmarks_list) where face_data==(bbox,score), landmarks_list=[[x,y], ...]
     """
-    # 低めの閾値で呼ぶ（必要なら allow_low_confidence=True を渡す）
-    res = detect_face(image_path, threshold=0.05, allow_low_confidence=True)
-    if not res:
-        return None, None
 
+    # あいちゃんのモデル
+    # # 低めの閾値で呼ぶ（必要なら allow_low_confidence=True を渡す）
+    # res = detect_face(image_path, threshold=0.05, allow_low_confidence=True)
+    # if not res:
+    #     return None, None
     # detect_face は (bbox, score) を返す前提
-    face_data = res
-    # 既にランドマーク文字列や配列を返す実装ならそれを返す（ここでは未想定）
-    # landmarks がないので bbox から近似ランドマークを作る
-    try:
-        bbox, score = face_data
-        x1, y1, x2, y2 = bbox
-        w = x2 - x1
-        h = y2 - y1
-        cx = x1 + w / 2
-        cy = y1 + h * 0.45  # 鼻付近を中心に寄せる
+    # face_data = res
+    # # 既にランドマーク文字列や配列を返す実装ならそれを返す（ここでは未想定）
+    # # landmarks がないので bbox から近似ランドマークを作る
+    # try:
+    #     bbox, score = face_data
+    #     x1, y1, x2, y2 = bbox
+    #     w = x2 - x1
+    #     h = y2 - y1
+    #     cx = x1 + w / 2
+    #     cy = y1 + h * 0.45  # 鼻付近を中心に寄せる
 
-        # 右目右端, 右目左端, 左目右端, 左目左端, 鼻, 口右, 口左, 鼻と口の間, 口中央
-        approx = [
-            [cx + w*0.20, cy - h*0.22],
-            [cx + w*0.05, cy - h*0.22],
-            [cx - w*0.05, cy - h*0.22],
-            [cx - w*0.20, cy - h*0.22],
-            [cx,             cy - h*0.05],
-            [cx + w*0.15, cy + h*0.25],
-            [cx - w*0.15, cy + h*0.25],
-            [cx,             cy + h*0.12],
-            [cx,             cy + h*0.25],
-        ]
-        return face_data, approx
-    except Exception:
-        return face_data, None
+    #     # 右目右端, 右目左端, 左目右端, 左目左端, 鼻, 口右, 口左, 鼻と口の間, 口中央
+    #     approx = [
+    #         [cx + w*0.20, cy - h*0.22],
+    #         [cx + w*0.05, cy - h*0.22],
+    #         [cx - w*0.05, cy - h*0.22],
+    #         [cx - w*0.20, cy - h*0.22],
+    #         [cx,             cy - h*0.05],
+    #         [cx + w*0.15, cy + h*0.25],
+    #         [cx - w*0.15, cy + h*0.25],
+    #         [cx,             cy + h*0.12],
+    #         [cx,             cy + h*0.25],
+    #     ]
+    #     return face_data, approx
+    # except Exception:
+    #     return face_data, None
+    
+    # あさひちゃんのモデル（detect.py使用）
+    # detect_face_and_lndmk は [[xmin, ymin], [xmax, ymax], [lx1, ly1], ..., [lx9, ly9]] を返す
+    
+    result = detect_face_and_lndmk(image_path, score_threshold=0.05) # 閾値0.05にしちゃった
+    
+    if result is None or len(result) < 11:  # bbox(2点) + landmarks(9点) = 11点
+        print("⚠️ detect_face_and_lndmk が顔を検出できませんでした。")
+        return None, None
+        
+    # バウンディングボックス情報を抽出
+    bbox_top_left = result[0]    # [xmin, ymin]
+    bbox_bottom_right = result[1]  # [xmax, ymax]
+    bbox = [bbox_top_left[0], bbox_top_left[1], bbox_bottom_right[0], bbox_bottom_right[1]]
+    
+    # スコアは取得できないので仮の値を設定
+    score = 1.0
+    
+    # ランドマーク9点を抽出
+    landmarks = result[2:11]  # インデックス2から10まで（9点）
+    
+    face_data = (bbox, score)
+    return face_data, landmarks, result
+# あさひちゃんここまで
 
 # 画像からランドマークを検出する
 def get_landmarks_from_face(image_path: str) -> Dict | None:
+    # あいちゃんのモデル
     # MLモデルで顔枠を検出（返り値: (bbox, score), raw_landmark_text/list ）
-    face_data, ML_LANDMARK_TEXT = detect_landmarks_text(image_path)
+    #face_data, ML_LANDMARK_TEXT = detect_landmarks_text(image_path)
+    # あいちゃんここまで
+
+    # あさひちゃんのモデル
+    face_data, face_landmarks_data, result = detect_landmarks_text(image_path)
+    # あさひちゃんここまで
     
     # 顔検出ができなかった時
-    if face_data is None:
+    # あいちゃんのモデル
+    #if face_data is None:
+    # あいちゃんここまで
+
+    # あさひちゃんのモデル
+    if face_data is None or face_landmarks_data is None:
+    # あさひちゃんここまで
         print("❌ MLモデルが顔を検出できませんでした。")
-        return None, None
+        return None, None, None
+    
+    # # あいちゃんのモデル
+    # # ランドマーク文字列またはリストから座標リストを作る
+    # face_landmarks_data = None
+    # if isinstance(ML_LANDMARK_TEXT, str):
+    #     face_landmarks_data = landmark_text_to_list(ML_LANDMARK_TEXT)
+    # elif isinstance(ML_LANDMARK_TEXT, list):
+    #     face_landmarks_data = ML_LANDMARK_TEXT
+    # else:
+    #     print("❌ランドマーク情報が見つかりません。")
+    #     return None, None
 
-    # ランドマーク文字列またはリストから座標リストを作る
-    face_landmarks_data = None
-    if isinstance(ML_LANDMARK_TEXT, str):
-        face_landmarks_data = landmark_text_to_list(ML_LANDMARK_TEXT)
-    elif isinstance(ML_LANDMARK_TEXT, list):
-        face_landmarks_data = ML_LANDMARK_TEXT
-    else:
-        print("❌ランドマーク情報が見つかりません。")
-        return None, None
+    # if not face_landmarks_data:
+    #     print("❌ランドマークのパースに失敗しました。")
+    #     return None, None
 
-    if not face_landmarks_data:
-        print("❌ランドマークのパースに失敗しました。")
-        return None, None
+    # if len(face_landmarks_data) != 9:
+    #     print(f"❌ランドマークは９点必要です。検出数: {len(face_landmarks_data)}")
+    #     # 9点でない場合も近似を作るか None を返すかは要件次第。ここでは失敗扱いにする
+    #     return None, None
 
-    if len(face_landmarks_data) != 9:
-        print(f"❌ランドマークは９点必要です。検出数: {len(face_landmarks_data)}")
-        # 9点でない場合も近似を作るか None を返すかは要件次第。ここでは失敗扱いにする
-        return None, None
+    # centers = get_center_landmarks(face_landmarks_data)
+    
+    # # bbox/score を取得（存在しない場合は None）
+    # try:
+    #     bbox, score = face_data
+    #     print(f"✅MLモデルが顔を検出し、ランドマークを計算しました。score={score: .2f}")
+    # except Exception:
+    #     bbox, score = None, None
+    # # あいちゃんここまで
+    
+    # あさひちゃんのモデル
+    # bbox/scoreを取得
+    bbox, score = face_data
+    print(f"✅MLモデルが顔を検出し、ランドマークを計算しました。score={score: .2f}")
 
-    centers = get_center_landmarks(face_landmarks_data)
-
-    # bbox/score を取得（存在しない場合は None）
-    try:
-        bbox, score = face_data
-        print(f"✅MLモデルが顔を検出し、ランドマークを計算しました。score={score: .2f}")
-    except Exception:
-        bbox, score = None, None
+    # bboxを渡してランドマーク辞書を作成（headも含む）
+    centers = get_center_landmarks(face_landmarks_data, bbox)
+    # あさひちゃんここまで
 
     meta = {
         "raw_points": face_landmarks_data,
@@ -253,7 +347,7 @@ def get_landmarks_from_face(image_path: str) -> Dict | None:
         "score": score
     }
     # 戻り値: (centers, meta)
-    return centers, meta
+    return centers, meta, result
 
     # 顔検出はできたけど、ランドマークのテキストデータがおかしい時
     # 顔検出はできたけど、ランドマーク数が足りない時
@@ -261,15 +355,12 @@ def get_landmarks_from_face(image_path: str) -> Dict | None:
         #print(f"❌ランドマークは９点必要です。検出数: {len(face_landmarks_data)}")
         #return None
     
-    #landmarks = get_center_landmarks(face_landmarks_data)
+    #parts_landmarks = get_center_landmarks(face_landmarks_data)
 
     # 顔検出のスコアを計算
     #_, score = face_data
     #print(f"✅MLモデルが顔を検出し、ランドマークを計算しました。score={score: .2f}")
-    #return landmarks
-
-    bbox, score = face_data
-    xmin, ymin, xmax, ymax = bbox
+    #return parts_landmarks
 
 # APIエンドポイントの作成
 @app.get("/")
@@ -288,14 +379,9 @@ async def upload_and_detect_landmarks(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
     
     # MLモデル（顔枠）からランドマークを推定
-    centers, meta = get_landmarks_from_face(original_image_path)
+    centers, meta, result = get_landmarks_from_face(original_image_path)
     
     # もしMLが失敗したら、エラー表示
-    if centers is None:
-        print("ML検出失敗")
-        centers = detect_landmarks_failure(original_image_path)
-        meta = None
-
     if centers is None:
         raise HTTPException(status_code=400, detail="ML検出失敗")
     
@@ -307,20 +393,18 @@ async def upload_and_detect_landmarks(file: UploadFile = File(...)):
     
     # 勝手に足しました:みうら
     ID_ACCESS_LOG[upload_image_id] = time.time() # アクセス履歴を残す
-    #
 
-    return JSONResponse(content={"upload_image_id": upload_image_id})
+    landmark_plot = plot_results(original_image_path, result)
+    buf = io.BytesIO()                      #データ変換の保存先生成
+    landmark_plot.save(buf, format="PNG")   #保存
+    buf.seek(0)                             #保存終わったから先頭に戻す(フィルムを先頭に戻す感じ？)
+    landmark_plot_b64 = base64.b64encode(buf.getvalue()).decode()
+    landmark_plot_uri = f"data:image/png;base64,{landmark_plot_b64}"
 
-def detect_landmarks_failure(image_path: str) -> Dict:
-    # ダミー関数は消した
-    try:
-        with Image.open(image_path) as img:
-            print("❌顔検出失敗")
-            return None
+    return JSONResponse(content={
+        "upload_image_id": upload_image_id,
+        "landmark_plot": landmark_plot_uri})
 
-    # 画像ファイルが開けなかった時用   
-    except Exception:
-        return None
 
 # スタンプ情報の取得(担当：西本)
 @app.post("/get_stamp_info", tags=["2. Get Stamp Info"])
@@ -336,7 +420,7 @@ async def get_stamp_info(data: StampRequestData):
     # temp/<upload_image_id>/landmarks.jsonからランドマークを取得
     landmarks_unity = os.path.join(TEMP_DIR, data.upload_image_id, "landmarks.json")
     if not os.path.exists(landmarks_unity):
-        raise HTTPException(status_code=404, detail="Upload Image IDが見つかりませんでした。")
+        raise HTTPException(status_code=404, detail="長時間操作が無かったため、接続が切れました。再度画像を選択してください。")
     with open(landmarks_unity, "r", encoding="utf-8") as f:
         unity = json.load(f)
     centers = unity.get("centers")
@@ -348,15 +432,34 @@ async def get_stamp_info(data: StampRequestData):
         re = centers["right_eye"]
         nose = centers["nose"]
         mouth = centers["mouth"]
+        head = centers["head"] # 追加しました。あさひちゃんのモデルで使えます。（高井良）
     except KeyError as e:
         raise HTTPException(status_code=400, detail=f"必要ランドマーク不足: {e}")
+        
+        # ★ ここを追加（bbox の情報を取り出しておく）★
+    bbox = meta.get("bbox")  # [x1, y1, x2, y2]
+    if bbox is not None:
+        x1, y1, x2, y2 = bbox
+        face_w = x2 - x1
+        face_h = y2 - y1
+        face_cx = (x1 + x2) / 2
 
+        # 「目の高さ」を顔の上からだいたい 38% あたりとみなす
+        eye_line_y = y1 + face_h * 0.38
+    else:
+        # 万一 bbox が無ければ、従来通り目のランドマークなどでざっくり代用
+        eye_dist   = abs(re["x"] - le["x"])
+        face_w     = eye_dist * 2.0
+        face_h     = face_w * 1.2
+        face_cx    = (le["x"] + re["x"]) / 2
+        eye_line_y = (le["y"] + re["y"]) / 2
+        x1, y1 = int(face_cx - face_w / 2), int(eye_line_y - face_h * 0.4)
     # -----------------------------
     # 2) スタンプ画像読み込み
     # -----------------------------
 
 # 2) スタンプ画像ファイルを www/<stamp_id> から読む
-    stamp_path = os.path.join(WWW_DIR, data.stamp_id + ".png")
+    stamp_path = os.path.join(WWW_DIR, "effect/" + data.stamp_id + ".png")
     if not os.path.exists(stamp_path):
         raise HTTPException(status_code=404, detail=f"スタンプ画像が見つかりません: {stamp_path}")
 
@@ -383,25 +486,51 @@ async def get_stamp_info(data: StampRequestData):
     needed_width_px = eye_dist * 1.8   # だいたいいい感じの大きさ
     x_left = eye_center_x - needed_width_px/2
     y_top  = eye_center_y - needed_width_px/2
-
+    
     if stamp_type == "glasses":
-        # ● メガネ位置
-        needed_width_px = eye_dist * 1.6
-        x_left = le["x"] - eye_dist * 0.35
-        y_top  = eye_center_y - eye_dist * 0.35
+        # ● メガネ：顔のbboxの中央付近に置く
+        # 顔幅に対する比率で横幅を決める
+        needed_width_px = face_w * 0.65   # 大きければ 0.6、小さければ 0.8 などで調整
+
+        # 縦横比から高さを計算
+        aspect = stamp_h / stamp_w
+        glasses_h_scaled = needed_width_px * aspect
+
+        # 中心を顔の横中央 & 目の高さに合わせる
+        x_left = face_cx - needed_width_px / 2
+
+        # 少しだけ下に下げたい時は 0.0〜0.1あたりを足す
+        eye_y = eye_line_y + face_h * 0.02
+        y_top = eye_y - glasses_h_scaled / 2
 
     elif stamp_type == "hat":
-        # ● 帽子（頭の上に乗る）
-        needed_width_px = eye_dist * 2.4
-        x_left = le["x"] - eye_dist * 0.7
-        y_top  = eye_center_y - eye_dist * 1.9   # 大きめに上へ
+        # ● 帽子（リボン）：頭の上に乗せる
+        # 顔幅の1.2倍くらいの幅にする
+        needed_width_px = face_w * 1.2
+
+        aspect = stamp_h / stamp_w
+        hat_h_scaled = needed_width_px * aspect
+
+        # 横方向：顔の中央
+        x_left = face_cx - needed_width_px / 2
+
+        # 縦方向：帽子の「下端」が顔のbboxの上から少し下に来るように
+        bottom_y = y1 + face_h * 0.12   # 深くかぶせたいなら 0.15〜0.2 に
+        y_top = bottom_y - hat_h_scaled
 
     elif stamp_type == "gantai":
-        # ● 眼帯（左目が基準）
-        needed_width_px = eye_dist * 1.2
-        x_left = le["x"] - eye_dist * 0.4
-        y_top  = le["y"] - eye_dist * 0.4
+        # ● 眼帯（左目用）：顔の左寄りの目あたりに置く
+        needed_width_px = face_w * 0.32
+        aspect = stamp_h / stamp_w
+        patch_h_scaled = needed_width_px * aspect
 
+        # 左目のX位置を「顔の左から30〜35%くらい」と仮定
+        left_eye_cx = x1 + face_w * 0.33   # ずれるなら 0.30〜0.36 で微調整
+
+        x_left = left_eye_cx - needed_width_px / 2
+        y_top = eye_line_y - patch_h_scaled / 2
+
+    
     else:
         # その他スタンプ（鼻あたり）
         needed_width_px = eye_dist * 1.0
@@ -416,7 +545,6 @@ async def get_stamp_info(data: StampRequestData):
         base_width_px = stamp_w
 
     scale = needed_width_px / base_width_px
-
     x_int = max(0, int(x_left))
     y_int = max(0, int(y_top))
 

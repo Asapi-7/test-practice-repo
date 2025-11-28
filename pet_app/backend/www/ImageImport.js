@@ -13,9 +13,6 @@ function ImageImport(files){
             method: 'POST',                                   //これはPOSTメソッドです
             body: formData                                    //実際に送るデータです
           });
-          if(!response.ok){
-            throw new Error('返答が芳しくなかった');
-          }
           const result = await response.json();
           return result;
         }catch(error){
@@ -25,9 +22,22 @@ function ImageImport(files){
       }
     
       const result = await sendUserImage(file);   //手紙を送って、返信を格納できるまで少し待つ
+      
+      if(result.detail){
+          console.log("エラーってるよ!backで!");
+          alert(result.detail);
+          return;
+      }
+
       const userID = result["upload_image_id"];   //返答からIDの情報を取る
       sessionStorage.setItem("ID", userID);       //ユーザー自身でIDを保持
+      const landmark_plot = new Image();
+      landmark_plot.src = result["landmark_plot"];   //返答からIDの情報を取る
+      landmark_plot.onload = () => {
+        sessionStorage.setItem("AnotherImg", JSON.stringify(result["landmark_plot"]));       //ユーザー自身でIDを保持
+      }
       console.log(userID);
+      console.log(landmark_plot);
 
       const OnEffect = [];                                        //有効化しているエフェクトを持つリスト
       sessionStorage.setItem("OnEffect",JSON.stringify(OnEffect)) //エフェクトの有効化状況を保存
@@ -42,7 +52,7 @@ function ImageImport(files){
       Img.src = event.target.result;                              //画像読み込み開始　こいつは処理が長い
 
       Img.onload = () => {                                        //画像読み込み終わった後の処理
-        const scale = 0;
+        let scale = 0;
         if(Img.width <= Img.height){                              //画像が縦長か横長かによって、幅を合わせる方を変更
           scale = ImageSpace.height/Img.height;
           ImageSpace.setAttribute('width', Img.width*scale)
@@ -61,4 +71,4 @@ function ImageImport(files){
 	}
 }
 
-//strage: ID, OnEffect, UserImageScale, Img
+//strage: ID, OnEffect, UserImageScale, Img, AnotherImg
