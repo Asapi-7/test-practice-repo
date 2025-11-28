@@ -46,14 +46,30 @@ async function EffectSelect(effectName){
     const ImageSpace = document.getElementById('ImageSpace');   //描画領域となるcanvasを指定
     const context = ImageSpace.getContext('2d');                //2D描画用のコンテキストを取得
     const effectImg = new Image();
-    effectImg.src = result["stamp_image"];                      //エフェクト画像の読み込み開始
-    effectImg.onload = () => {                                  //読み込み完了後、バックエンドの指示通りに画像を描画
-        const effectX = result["x"];
-        const effectY = result["y"];
-        const effectScale = result["scale"];
-        context.drawImage(effectImg, effectX, effectY, effectImg.width*effectScale, effectImg.height*effectScale);
-    }
+    effectImg.src = result["stamp_image"];                     //エフェクト画像の読み込み開始
+    //変更したよ
+    effectImg.onload = () => {                                  // 読み込み完了後、バックエンドの指示通りに画像を描画
+    // 元画像 → キャンバスの拡大率（ImageImport.js で保存した値）
+    const baseScale = UserImageScale ?? 1;
+
+    // バックエンドから来る座標は「元画像基準」なので、
+    // キャンバス上では baseScale 倍してあげる
+    const effectX = result["x"] * baseScale;
+    const effectY = result["y"] * baseScale;
+
+    // scale も元画像基準なので、ここでも baseScale を掛ける
+    const effectScale = result["scale"] * baseScale;
+
+    context.drawImage(
+        effectImg,
+        effectX,
+        effectY,
+        effectImg.width  * effectScale,
+        effectImg.height * effectScale
+    );
+}
+
 }
 
 //UserImageScaleが加工する画像の倍率です
-//strage: ID, OnEffect, UserImageScale, Img, AnotherImg
+//strage: ID, OnEffect, UserImageScale, Img

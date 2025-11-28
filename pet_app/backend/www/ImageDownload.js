@@ -15,4 +15,4 @@ function ImageDownload(){
 	}, 'image/png')
 }
 
-//strage: ID, OnEffect, UserImageScale, Img, AnotherImg
+//strage: ID, OnEffect, UserImageScale, Img
