@@ -440,15 +440,20 @@ async def get_stamp_info(data: StampRequestData):
     bbox = meta.get("bbox")  # [x1, y1, x2, y2]
     if bbox is not None:
         x1, y1, x2, y2 = bbox
-        head_top_y = y1
-        head_bottom_y = y2
-        head_height = y2 - y1
+        face_w = x2 - x1
+        face_h = y2 - y1
+        face_cx = (x1 + x2) / 2
+
+        # 「目の高さ」を顔の上からだいたい 38% あたりとみなす
+        eye_line_y = y1 + face_h * 0.38
     else:
-        # bbox が無いとき用のざっくりフォールバック
-        eye_dist_fallback = abs(re["x"] - le["x"])
-        head_top_y = min(le["y"], re["y"]) - eye_dist_fallback * 1.2
-        head_bottom_y = max(le["y"], re["y"]) + eye_dist_fallback * 1.0
-        head_height = head_bottom_y - head_top_y   
+        # 万一 bbox が無ければ、従来通り目のランドマークなどでざっくり代用
+        eye_dist   = abs(re["x"] - le["x"])
+        face_w     = eye_dist * 2.0
+        face_h     = face_w * 1.2
+        face_cx    = (le["x"] + re["x"]) / 2
+        eye_line_y = (le["y"] + re["y"]) / 2
+        x1, y1 = int(face_cx - face_w / 2), int(eye_line_y - face_h * 0.4)
     # -----------------------------
     # 2) スタンプ画像読み込み
     # -----------------------------
@@ -483,61 +488,49 @@ async def get_stamp_info(data: StampRequestData):
     y_top  = eye_center_y - needed_width_px/2
     
     if stamp_type == "glasses":
-        lens_gap_src = GLASS_R_CX - GLASS_L_CX   # 1280画像内でのレンズ中心間距離
-        eye_dist = abs(re["x"] - le["x"])        # 画像上の左右の目の距離（横方向だけでOK）
+        # ● メガネ：顔のbboxの中央付近に置く
+        # 顔幅に対する比率で横幅を決める
+        needed_width_px = face_w * 0.65   # 大きければ 0.6、小さければ 0.8 などで調整
 
-        # どれくらい拡大/縮小するか
-        scale = eye_dist / lens_gap_src
+        # 縦横比から高さを計算
+        aspect = stamp_h / stamp_w
+        glasses_h_scaled = needed_width_px * aspect
 
-        # スタンプ画像全体のスケーリング後サイズ（参考値）
-        needed_width_px  = stamp_w * scale
-        needed_height_px = stamp_h * scale
+        # 中心を顔の横中央 & 目の高さに合わせる
+        x_left = face_cx - needed_width_px / 2
 
-        # 左レンズの中心を左目の位置に合わせる
-        eye_center_y = (le["y"] + re["y"]) / 2
+        # 少しだけ下に下げたい時は 0.0〜0.1あたりを足す
+        eye_y = eye_line_y + face_h * 0.02
+        y_top = eye_y - glasses_h_scaled / 2
 
-        # 少しだけ下にずらしたいならここを調整（0 〜 0.2 * eye_dist くらい）
-        center_offset_y = eye_dist * 0.05
-
-        # 左上座標 = 目の座標 - (レンズ中心の座標 * scale)
-        x_left = le["x"] - scale * GLASS_L_CX
-        y_top  = (eye_center_y + center_offset_y) - scale * GLASS_L_CY
-
-    
     elif stamp_type == "hat":
-        # ● 帽子（リボン）
-        # 目と目の距離に対して、少し大きめに
-        needed_width_px = eye_dist * 2.6   # デカすぎたら 2.2 とかに
+        # ● 帽子（リボン）：頭の上に乗せる
+        # 顔幅の1.2倍くらいの幅にする
+        needed_width_px = face_w * 1.2
 
         aspect = stamp_h / stamp_w
         hat_h_scaled = needed_width_px * aspect
 
-        # 横方向：両目の真ん中
-        x_left = eye_center_x - needed_width_px / 2
+        # 横方向：顔の中央
+        x_left = face_cx - needed_width_px / 2
 
-        # 縦方向：目よりだいぶ上に配置
-        # 「帽子の下端」が目より少し上になるようなイメージ
-        eye_min_y = min(le["y"], re["y"])
-        bottom_y = eye_min_y - eye_dist * 0.15   # 0.1〜0.3 くらいで調整
+        # 縦方向：帽子の「下端」が顔のbboxの上から少し下に来るように
+        bottom_y = y1 + face_h * 0.12   # 深くかぶせたいなら 0.15〜0.2 に
         y_top = bottom_y - hat_h_scaled
 
     elif stamp_type == "gantai":
-        # ● 眼帯（左目を覆う）
-        # 目と目の距離を基準に、眼帯の幅を決める
-        needed_width_px = eye_dist * 1.5
-
-        # 拡大後の高さ
+        # ● 眼帯（左目用）：顔の左寄りの目あたりに置く
+        needed_width_px = face_w * 0.32
         aspect = stamp_h / stamp_w
         patch_h_scaled = needed_width_px * aspect
 
-        # まずは「画像の中心が左目の中心に来る」ように配置
-        x_left = le["x"] - needed_width_px / 2
-        y_top = le["y"] - patch_h_scaled / 2
+        # 左目のX位置を「顔の左から30〜35%くらい」と仮定
+        left_eye_cx = x1 + face_w * 0.33   # ずれるなら 0.30〜0.36 で微調整
 
-        # ひもなどを考慮して、少しだけ左上にずらす（好みに応じて調整）
-        x_left -= eye_dist * 0.05   # 左に 5% ずらす
-        y_top -= eye_dist * 0.05    # 上に 5% ずらす
+        x_left = left_eye_cx - needed_width_px / 2
+        y_top = eye_line_y - patch_h_scaled / 2
 
+    
     else:
         # その他スタンプ（鼻あたり）
         needed_width_px = eye_dist * 1.0
@@ -551,10 +544,7 @@ async def get_stamp_info(data: StampRequestData):
     if base_width_px <= 0:
         base_width_px = stamp_w
 
-     # glasses 以外はここで scale を計算
-    if stamp_type != "glasses":
-        scale = needed_width_px / base_width_px
-
+    scale = needed_width_px / base_width_px
     x_int = max(0, int(x_left))
     y_int = max(0, int(y_top))
 
