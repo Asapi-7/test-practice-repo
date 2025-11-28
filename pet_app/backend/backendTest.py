@@ -27,8 +27,8 @@ import json
 
 # モデルを切り替える
 USE_NAKAYAMA_MODEL = False
-USE_MORI_MODEL = False
-USE_MIZUNUMA_MODEL = True
+USE_MORI_MODEL = True
+USE_MIZUNUMA_MODEL = False
 
 # モデル別のインポートと定義
 if USE_NAKAYAMA_MODEL:
@@ -129,7 +129,7 @@ STAMP_PX = {
     "glasses": 577,
     "kanmuri": 1280,
     "mimi": 1280,
-    "sangurasu": 1280
+    "sangurasu": 1280,
 }
 
 # ユーザーからサーバーへのデータ形式を定義
