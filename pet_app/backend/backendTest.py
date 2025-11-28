@@ -125,6 +125,7 @@ STAMP_PLACEMENT_RULES = {
 }
 
 # ちょうどいいスタンプのサイズを計算するために元画像の横幅のpxを設定しておく
+# いらないかもこれ〜〜
 STAMP_PX = {
     "bousi": 1280,
     "chouchou": 1280,
