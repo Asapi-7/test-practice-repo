@@ -322,7 +322,7 @@ def get_landmarks_from_face(image_path: str) -> Dict | None:
             bbox, score = None, None
     
     elif USE_MORI_MODEL or USE_MIZUNUMA_MODEL:
-        face_data, face_landmarks_data = detect_landmarks_text(image_path)
+        face_data, face_landmarks_data, result = detect_landmarks_text(image_path)
         
         # 顔検出ができなかった時
         if face_data is None or face_landmarks_data is None:
@@ -382,7 +382,7 @@ async def upload_and_detect_landmarks(file: UploadFile = File(...)):
     
     # MLの推論時間を表示
     ml_start_time = time.time()
-    centers, meta = get_landmarks_from_face(original_image_path)
+    centers, meta, result = get_landmarks_from_face(original_image_path)
     ml_end_time = time.time()
     print(f"ML推論時間: {(ml_end_time - ml_start_time) * 1000:.2f}ms")
     
