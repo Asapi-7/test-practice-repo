@@ -12,7 +12,8 @@ from fastapi.responses import JSONResponse, RedirectResponse
 # 勝手に足しました：みうら
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
-import asyncio, time, shutil
+import asyncio, time, shutil, io
+from backend.plot_results import plot_results
 #
 
 from pydantic import BaseModel
@@ -45,7 +46,9 @@ def encode_image_to_base64(image_path: str) -> str:
         encoded_bytes = base64.b64encode(image_file.read())
         return f"data:image/png;base64,{encoded_bytes.decode('utf-8')}"
 
+# 勝手に足しました：みうら
 ID_ACCESS_LOG = {}
+#
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -88,8 +91,8 @@ os.makedirs(TEMP_DIR, exist_ok=True)
 
 # フロントエンドの静的ファイルを保存するためのwwwディレクトリを作成
 # 例: pet.html, EffectSelect.js, ImageDownload.js, ImageImport.js
-WWW_DIR = "www"
-os.makedirs(WWW_DIR, exist_ok=True)
+BASE_DIR = os.path.dirname(__file__)  # backendTest.py がある場所
+WWW_DIR = os.path.join(BASE_DIR, "www")  # backend/www を指定
 
 # /static 配下で www/ のファイルを公開 fastAPI動かす用
 # -> http://localhost:8000/static/pet.html で pet.html が見える
@@ -126,11 +129,18 @@ STAMP_PX = {
     "bousi": 1280,
     "chouchou": 1280,
     "dokuro": 1280,
-    "glasses": 577,
+    "glasses": 1280,
     "kanmuri": 1280,
     "mimi": 1280,
     "sangurasu": 1280,
 }
+
+# glasses.png 内のレンズ中心座標（元画像 1280x1280 基準）
+GLASS_L_CX = 367  # 左レンズ中心 x
+GLASS_L_CY = 636  # 左レンズ中心 y
+GLASS_R_CX = 926  # 右レンズ中心 x
+GLASS_R_CY = 636  # 右レンズ中心 y
+
 
 # ユーザーからサーバーへのデータ形式を定義
 class StampRequestData(BaseModel):
@@ -388,9 +398,17 @@ async def upload_and_detect_landmarks(file: UploadFile = File(...)):
     
     # 勝手に足しました:みうら
     ID_ACCESS_LOG[upload_image_id] = time.time() # アクセス履歴を残す
-    #
 
-    return JSONResponse(content={"upload_image_id": upload_image_id})
+    landmark_plot = plot_results(original_image_path, result)
+    buf = io.BytesIO()                      #データ変換の保存先生成
+    landmark_plot.save(buf, format="PNG")   #保存
+    buf.seek(0)                             #保存終わったから先頭に戻す(フィルムを先頭に戻す感じ？)
+    landmark_plot_b64 = base64.b64encode(buf.getvalue()).decode()
+    landmark_plot_uri = f"data:image/png;base64,{landmark_plot_b64}"
+
+    return JSONResponse(content={
+        "upload_image_id": upload_image_id,
+        "landmark_plot": landmark_plot_uri})
 
 
 # スタンプ情報の取得(担当：西本)
@@ -422,7 +440,25 @@ async def get_stamp_info(data: StampRequestData):
         head = centers["head"] # 追加しました。あさひちゃんのモデルで使えます。（高井良）
     except KeyError as e:
         raise HTTPException(status_code=400, detail=f"必要ランドマーク不足: {e}")
+        
+        # ★ ここを追加（bbox の情報を取り出しておく）★
+    bbox = meta.get("bbox")  # [x1, y1, x2, y2]
+    if bbox is not None:
+        x1, y1, x2, y2 = bbox
+        face_w = x2 - x1
+        face_h = y2 - y1
+        face_cx = (x1 + x2) / 2
 
+        # 「目の高さ」を顔の上からだいたい 38% あたりとみなす
+        eye_line_y = y1 + face_h * 0.38
+    else:
+        # 万一 bbox が無ければ、従来通り目のランドマークなどでざっくり代用
+        eye_dist   = abs(re["x"] - le["x"])
+        face_w     = eye_dist * 2.0
+        face_h     = face_w * 1.2
+        face_cx    = (le["x"] + re["x"]) / 2
+        eye_line_y = (le["y"] + re["y"]) / 2
+        x1, y1 = int(face_cx - face_w / 2), int(eye_line_y - face_h * 0.4)
     # -----------------------------
     # 2) スタンプ画像読み込み
     # -----------------------------
@@ -455,30 +491,51 @@ async def get_stamp_info(data: StampRequestData):
     needed_width_px = eye_dist * 1.8   # だいたいいい感じの大きさ
     x_left = eye_center_x - needed_width_px/2
     y_top  = eye_center_y - needed_width_px/2
-
+    
     if stamp_type == "glasses":
-        needed_width_px = eye_dist * 2.0
-        aspect = stamp_h / stamp_w               # 元画像の h / w
-        glasses_h = needed_width_px * aspect 
-        x_left = eye_center_x - needed_width_px / 2
-        center_offset_y = eye_dist * 0.05 
-        y_top = (eye_center_y + center_offset_y) - glasses_h / 2
+        # ● メガネ：顔のbboxの中央付近に置く
+        # 顔幅に対する比率で横幅を決める
+        needed_width_px = face_w * 0.65   # 大きければ 0.6、小さければ 0.8 などで調整
+
+        # 縦横比から高さを計算
+        aspect = stamp_h / stamp_w
+        glasses_h_scaled = needed_width_px * aspect
+
+        # 中心を顔の横中央 & 目の高さに合わせる
+        x_left = face_cx - needed_width_px / 2
+
+        # 少しだけ下に下げたい時は 0.0〜0.1あたりを足す
+        eye_y = eye_line_y + face_h * 0.02
+        y_top = eye_y - glasses_h_scaled / 2
 
     elif stamp_type == "hat":
-        # ● 帽子（頭の上に乗る）
-        needed_width_px = eye_dist * 3.0
-        aspect = stamp_h / stamp_w          # 元画像の h / w
-        stamp_h_scaled = needed_width_px * aspect
-        x_left = eye_center_x - needed_width_px / 2
-        GLASS_CENTER_RATIO = 0.35           # ← 見た目を見て 0.3〜0.4 で調整
-        y_top = eye_center_y - stamp_h_scaled * GLASS_CENTER_RATIO
-        
-    elif stamp_type == "gantai":
-        # ● 眼帯（左目が基準）
-        needed_width_px = eye_dist * 1.2
-        x_left = le["x"] - eye_dist * 0.4
-        y_top  = le["y"] - eye_dist * 0.4
+        # ● 帽子（リボン）：頭の上に乗せる
+        # 顔幅の1.2倍くらいの幅にする
+        needed_width_px = face_w * 1.2
 
+        aspect = stamp_h / stamp_w
+        hat_h_scaled = needed_width_px * aspect
+
+        # 横方向：顔の中央
+        x_left = face_cx - needed_width_px / 2
+
+        # 縦方向：帽子の「下端」が顔のbboxの上から少し下に来るように
+        bottom_y = y1 + face_h * 0.12   # 深くかぶせたいなら 0.15〜0.2 に
+        y_top = bottom_y - hat_h_scaled
+
+    elif stamp_type == "gantai":
+        # ● 眼帯（左目用）：顔の左寄りの目あたりに置く
+        needed_width_px = face_w * 0.32
+        aspect = stamp_h / stamp_w
+        patch_h_scaled = needed_width_px * aspect
+
+        # 左目のX位置を「顔の左から30〜35%くらい」と仮定
+        left_eye_cx = x1 + face_w * 0.33   # ずれるなら 0.30〜0.36 で微調整
+
+        x_left = left_eye_cx - needed_width_px / 2
+        y_top = eye_line_y - patch_h_scaled / 2
+
+    
     else:
         # その他スタンプ（鼻あたり）
         needed_width_px = eye_dist * 1.0
@@ -493,7 +550,6 @@ async def get_stamp_info(data: StampRequestData):
         base_width_px = stamp_w
 
     scale = needed_width_px / base_width_px
-
     x_int = max(0, int(x_left))
     y_int = max(0, int(y_top))
 
