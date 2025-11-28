@@ -503,22 +503,22 @@ async def get_stamp_info(data: StampRequestData):
         y_top  = eye_center_y - glasses_h_scaled / 2
         
     elif stamp_type == "hat":
-        needed_width_px = face_w * 1.2
-        aspect = stamp_h / stamp_w
-        hat_h_scaled = needed_width_px * aspect
+        # ===== 帽子：目だけを基準に決める =====
         eye_center_x = (le["x"] + re["x"]) / 2
         eye_center_y = (le["y"] + re["y"]) / 2
         eye_dist = abs(re["x"] - le["x"])
-        face_ratio = face_h / face_w if face_w > 0 else 1.0
-        if face_ratio > 1.5:
-            k = 1.1      # 超もふ → かなり上
-        elif face_ratio > 1.2:
-            k = 0.9      # ちょいもふ → 少し上
-        else:
-            k = 0.7      # ふつう → これまで通り
+        needed_width_px = eye_dist * 2.2   # 大きさを変えたいときはここだけいじる
+        aspect = stamp_h / stamp_w
+        hat_h_scaled = needed_width_px * aspect
         x_left = eye_center_x - needed_width_px / 2
-        bottom_y = eye_center_y - eye_dist * k
-        y_top = bottom_y - hat_h_scaled
+
+        # 縦位置：
+        #   目の高い方の y から、eye_dist の 0.9 倍だけ上に「帽子の中心」を置く
+        eye_top_y = min(le["y"], re["y"])
+        hat_center_y = eye_top_y - eye_dist * 0.9    # 数字を変えると上下に動かせる
+
+        # 画像の中心を hat_center_y に合わせる
+        y_top = hat_center_y - hat_h_scaled * 0.55
 
     elif stamp_type == "mimi":
         needed_width_px = face_w * 1.2
