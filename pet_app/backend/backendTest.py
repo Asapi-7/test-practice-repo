@@ -494,20 +494,13 @@ async def get_stamp_info(data: StampRequestData):
     y_top  = eye_center_y - needed_width_px/2
     
     if stamp_type == "glasses":
-        # ● メガネ：顔のbboxの中央付近に置く
-        # 顔幅に対する比率で横幅を決める
-        needed_width_px = face_w * 0.65   # 大きければ 0.6、小さければ 0.8 などで調整
-
-        # 縦横比から高さを計算
+        eye_center_x = (le["x"] + re["x"]) / 2
+        eye_center_y = (le["y"] + re["y"]) / 2
+        needed_width_px = face_w * 0.65
         aspect = stamp_h / stamp_w
         glasses_h_scaled = needed_width_px * aspect
-
-        # 中心を顔の横中央 & 目の高さに合わせる
-        x_left = face_cx - needed_width_px / 2
-
-        # 少しだけ下に下げたい時は 0.0〜0.1あたりを足す
-        eye_y = eye_line_y + face_h * 0.02
-        y_top = eye_y - glasses_h_scaled / 2
+        x_left = eye_center_x - needed_width_px / 2
+        y_top  = eye_center_y - glasses_h_scaled / 2
 
     elif stamp_type == "hat":
         # ● 帽子（リボン）：頭の上に乗せる
@@ -529,13 +522,11 @@ async def get_stamp_info(data: StampRequestData):
         needed_width_px = face_w * 0.32
         aspect = stamp_h / stamp_w
         patch_h_scaled = needed_width_px * aspect
-
-        # 左目のX位置を「顔の左から30〜35%くらい」と仮定
-        left_eye_cx = x1 + face_w * 0.33   # ずれるなら 0.30〜0.36 で微調整
-
+        left_eye_cx = re["x"]
+        left_eye_cy = re["y"]
         x_left = left_eye_cx - needed_width_px / 2
-        y_top = eye_line_y - patch_h_scaled / 2
-
+        y_top  = left_eye_cy - patch_h_scaled / 2
+        
     
     else:
         # その他スタンプ（鼻あたり）
