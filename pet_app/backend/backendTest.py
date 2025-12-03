@@ -513,12 +513,12 @@ async def get_stamp_info(data: StampRequestData):
         needed_width_px = bbox_w * width_factor
         aspect = stamp_h / stamp_w
         hat_h_scaled = needed_width_px * aspect
-        
-        OFFSET_X = 0
         if data.stamp_id == "chouchou":
-            OFFSET_X = 12   # 例：リボンだけ右に12pxずらす
+            OFFSET_X = 19      # 右に12px
+            OFFSET_Y = 8       # 下に8px（値はお好みで調整OK）
+
         x_left = bbox_cx - needed_width_px / 2 + OFFSET_X
-        y_top  = bbox_top_y - hat_h_scaled
+        y_top  = bbox_top_y - hat_h_scaled+ OFFSET_Y
 
 
 
