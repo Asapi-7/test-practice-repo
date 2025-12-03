@@ -513,27 +513,14 @@ async def get_stamp_info(data: StampRequestData):
         needed_width_px = bbox_w * width_factor
         aspect = stamp_h / stamp_w
         hat_h_scaled = needed_width_px * aspect
-            
-        x_left = bbox_cx - needed_width_px / 2
+        
+        OFFSET_X = 0
+        if data.stamp_id == "chouchou":
+            OFFSET_X = 12   # 例：リボンだけ右に12pxずらす
+        x_left = bbox_cx - needed_width_px / 2 + OFFSET_X
         y_top  = bbox_top_y - hat_h_scaled
 
-    elif stamp_type == "mimi":
-        needed_width_px = face_w * 1.2
-        aspect = stamp_h / stamp_w
-        mimi_h_scaled = needed_width_px * aspect
-        eye_center_x = (le["x"] + re["x"]) / 2
-        eye_center_y = (le["y"] + re["y"]) / 2
-        eye_dist = abs(re["x"] - le["x"])
-        face_ratio = face_h / face_w if face_w > 0 else 1.0
-        if face_ratio > 1.5:
-            k = 1.6
-        elif face_ratio > 1.2:
-            k = 1.3
-        else:
-            k = 1.1
-        x_left = eye_center_x - needed_width_px / 2
-        bottom_y = eye_center_y - eye_dist * k
-        y_top = bottom_y - mimi_h_scaled
+
 
     elif stamp_type == "gantai":
         # ● 眼帯（左目用）：顔の左寄りの目あたりに置く
