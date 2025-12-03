@@ -3,7 +3,7 @@
 <head>
   <title>ペットをおしゃれにしてみましょう</title>
   <meta charset="UTF-8">
-  <meta name="viewport" content="device^width">
+  <meta name="viewport" content="device-width">
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Cherry+Bomb+One&display=swap');
 
@@ -106,49 +106,41 @@
 
 </div>
 </div>
-
-<script src="ImageImport.js"></script><!--ここはテスト用本来はImageImport.jsって書く-->
-<!--勝手に足しました:みうら-->
-<script src="count.js"></script>
-<script src="EffectSelect.js"></script>
-<script src="EffectRemove.js"></script>
+<script src="ImageImport.js"></script>
 <script src="ImageDownload.js"></script>
 <script src="OtherProcess.js"></script>
+
 <!---->
 
 <div class="EffectButton">
-<button class="effect-button" type="button" name = "sangurasu" onclick = "EffectSelect(this.name)">
+<button class="effect-button" type="button" name = "sangurasu" effectName="sangurasu" onclick="handleClick('sangurasu')">
     <img src="button/glass.png" alt="glass Image" style="height: 100%;">
 </button>
-<button class="effect-button" type="button" name = "bousi" onclick = "EffectSelect(this.name)">
+<button class="effect-button" type="button" name = "bousi" effectName="bousi" onclick="handleClick('bousi')">
     <img src="button/hat.png" alt="hat Image" style="height: 100%;">
 </button>
-<button class="effect-button" type="button" name = "chouchou" onclick = "EffectSelect(this.name)">
+<button class="effect-button" type="button" name = "chouchou" effectName="chouchou" onclick="handleClick('chouchou')">
     <img src="button/ribbon.png" alt="Ribbon Image" style="height: 100%;">
 </button>
-<button class="effect-button" type="button" name = "hart" onclick = "EffectSelect(this.name)">
+<button class="effect-button" type="button" name = "hart" effectName="hart" onclick="handleClick('hart')">
     <img src="button/hart.png" alt="hart Image" style="height: 100%;">
 </button>
-<button class="effect-button" type="button" name = "dokuro" onclick = "EffectSelect(this.name)">
-    <img src="gantai.png" alt="gantai Image" style="height: 100%;">
-</button>
-<button class="effect-button" type="button" name = "kanmuri" onclick = "EffectSelect(this.name)">
-    <img src="oukan.png" alt="oukan Image" style="height: 100%;">
-</button>
-<button class="effect-button" type="button" name = "mimi" onclick = "EffectSelect(this.name)">
-    <img src="rabbit.png" alt="rabbit Image" style="height: 100%;">
+<button class="effect-button" type="button" name = "dokuro" effectName="dokuro" onclick="handleClick('dokuro')">
     <img src="button/gantai.png" alt="gantai Image" style="height: 100%;">
 </button>
-<button class="effect-button" type="button" name = "kanmuri" onclick = "EffectSelect(this.name)">
+<button class="effect-button" type="button" name = "kanmuri" effectName="kanmuri" onclick="handleClick('kanmuri')">
     <img src="button/oukan.png" alt="oukan Image" style="height: 100%;">
 </button>
-<button class="effect-button" type="button" name = "mimi" onclick = "EffectSelect(this.name)">
+<button class="effect-button" type="button" name = "mimi" effectName="mimi" onclick="handleClick('mimi')">
     <img src="button/rabbit.png" alt="rabbit Image" style="height: 100%;">
 </button>
-<button class="effect-button" type="button" name = "star" onclick = "EffectSelect(this.name)">
+<button class="effect-button" type="button" name = "star" effectName="star" onclick="handleClick('star')">
     <img src="button/star.png" alt="star Image" style="height: 100%;">
 </button>
 </div>
 </div>
+<script src="EffectSelect.js"></script>
+<script src="EffectRemove.js"></script>
+<script src="selfcount.js"></script>
 </body>
 </html>

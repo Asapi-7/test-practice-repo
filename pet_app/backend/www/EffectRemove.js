@@ -1,7 +1,7 @@
 async function EffectRemove(effectName){
     //effectNameを元に、選択されたエフェクト画像を削除した画像を出力する
     //画像の再生成には、EffectSelectを最大限活用している
-    const RegenerateEffect = JSON.parse(sessionStorage.getItem("OnEffect"));    //現時点で描画されているエフェクトを得る
+    let RegenerateEffect = JSON.parse(sessionStorage.getItem("OnEffect"));    //現時点で描画されているエフェクトを得る
     RegenerateEffect = RegenerateEffect.filter(item => item !== effectName);    //今回削除するエフェクトだけ、配列から消す
     sessionStorage.setItem("OnEffect",JSON.stringify([]));                      //エフェクトを再度描画し直すため、一回有効化状況を空っぽに
 
