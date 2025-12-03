@@ -111,7 +111,7 @@ STAMP_PLACEMENT_RULES = {
         "type": "hat"
     },
     "mimi": {
-        "type": "mimi"
+        "type": "hat"
     },
     "dokuro": {
         "type": "gantai"
@@ -503,61 +503,24 @@ async def get_stamp_info(data: StampRequestData):
         y_top  = eye_center_y - glasses_h_scaled / 2
         
     elif stamp_type == "hat":
-        # ===== 帽子：バウンディングボックスを基準に配置 =====
-        if bbox is not None:
-            # bbox から幅・高さ・中心座標を計算
-            bx1, by1, bx2, by2 = bbox  # [xmin, ymin, xmax, ymax]
-            bbox_w = bx2 - bx1
-            bbox_h = by2 - by1
-            bbox_cx = (bx1 + bx2) / 2
-            bbox_cy = (by1 + by2) / 2
-
-            # 1. bbx の横幅に合わせて帽子画像をスケーリング
-            #    （少しだけ大きくしたければ 1.1 とかに変える）
-            width_factor = 1.0
-            needed_width_px = bbox_w * width_factor
-
-            # 元画像の縦横比から、スケーリング後の高さを計算
-            aspect = stamp_h / stamp_w          # = 高さ / 幅
-            hat_h_scaled = needed_width_px * aspect
-
-            # 2. bbx の中心に「帽子画像の下中央」が来るように左上座標を計算
-            #    ・x 方向：中心を合わせる → 左上 = cx - 幅/2
-            #    ・y 方向：bottom = bbox_cy になるように → y_top = cy - 高さ
-            x_left = bbox_cx - needed_width_px / 2
-            y_top  = bbox_cy - hat_h_scaled
-
-        else:
-            # bbox が無いときのフォールバック（従来の目基準ロジック）
-            eye_center_x = (le["x"] + re["x"]) / 2
-            eye_center_y = (le["y"] + re["y"]) / 2
-            eye_dist = abs(re["x"] - le["x"])
-            needed_width_px = eye_dist * 2.2   # 大きさを変えたいときはここだけ
-            aspect = stamp_h / stamp_w
-            hat_h_scaled = needed_width_px * aspect
-            x_left = eye_center_x - needed_width_px / 2
-
-            eye_top_y = min(le["y"], re["y"])
-            hat_center_y = eye_top_y - eye_dist * 0.9
-            y_top = hat_center_y - hat_h_scaled * 0.55
-
-    elif stamp_type == "mimi":
-        needed_width_px = face_w * 1.2
+        bx1, by1, bx2, by2 = bbox  # [xmin, ymin, xmax, ymax]
+        bbox_w = bx2 - bx1
+        bbox_h = by2 - by1
+        bbox_cx = (bx1 + bx2) / 2   # 横方向の中心
+        bbox_top_y = by1            # 上端の y（ここに帽子の底を合わせたい）
+            
+        width_factor = 1.0          # 1.1 とかにすると少し大きくできる
+        needed_width_px = bbox_w * width_factor
         aspect = stamp_h / stamp_w
-        mimi_h_scaled = needed_width_px * aspect
-        eye_center_x = (le["x"] + re["x"]) / 2
-        eye_center_y = (le["y"] + re["y"]) / 2
-        eye_dist = abs(re["x"] - le["x"])
-        face_ratio = face_h / face_w if face_w > 0 else 1.0
-        if face_ratio > 1.5:
-            k = 1.6
-        elif face_ratio > 1.2:
-            k = 1.3
-        else:
-            k = 1.1
-        x_left = eye_center_x - needed_width_px / 2
-        bottom_y = eye_center_y - eye_dist * k
-        y_top = bottom_y - mimi_h_scaled
+        hat_h_scaled = needed_width_px * aspect
+        if data.stamp_id == "chouchou":
+            OFFSET_X = 19      # 右に12px
+            OFFSET_Y = 8       # 下に8px（値はお好みで調整OK）
+
+        x_left = bbox_cx - needed_width_px / 2 + OFFSET_X
+        y_top  = bbox_top_y - hat_h_scaled+ OFFSET_Y
+
+
 
     elif stamp_type == "gantai":
         # ● 眼帯（左目用）：顔の左寄りの目あたりに置く
