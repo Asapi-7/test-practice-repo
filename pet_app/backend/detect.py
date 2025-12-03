@@ -1,4 +1,5 @@
 import os
+import time
 import torch
 from PIL import Image
 import numpy as np
@@ -96,6 +97,8 @@ def decode_heatmaps_to_coordinates(heatmaps: torch.Tensor) -> np.ndarray:
 
 
 def detect_face_and_lndmk(image_path: str, score_threshold: float = 0.3):
+    start_time = time.time()
+    
     if face_detector is None or landmark_detector is None:
         print("❌ 必要なモデルがロードされていません。")
         return None
@@ -107,12 +110,17 @@ def detect_face_and_lndmk(image_path: str, score_threshold: float = 0.3):
         return None
     
     W, H = img_original.size
-    
+    image_load_time = time.time()
+    print(f"⏱️ 画像読み込み時間: {(image_load_time - start_time) * 1000:.2f}ms")
     
     img_tensor = F.to_tensor(img_original).to(DEVICE)
 
+    # Faster R-CNN（顔検出）
+    face_detect_start = time.time()
     with torch.no_grad():
         outputs = face_detector([img_tensor])
+    face_detect_time = time.time()
+    print(f"⏱️ Faster R-CNN（顔検出）時間: {(face_detect_time - face_detect_start) * 1000:.2f}ms")
 
     output = outputs[0]
     boxes = output["boxes"].cpu().numpy()
@@ -147,8 +155,12 @@ def detect_face_and_lndmk(image_path: str, score_threshold: float = 0.3):
         
     cropped_img_tensor = UNET_TRANSFORM(cropped_img_pil).unsqueeze(0).to(DEVICE)
     
+    # UNet（ランドマーク検出）
+    landmark_detect_start = time.time()
     with torch.no_grad():
         heatmaps_pred = landmark_detector(cropped_img_tensor).cpu()
+    landmark_detect_time = time.time()
+    print(f"⏱️ UNet（ランドマーク検出）時間: {(landmark_detect_time - landmark_detect_start) * 1000:.2f}ms")
         
     relative_landmarks_np = decode_heatmaps_to_coordinates(heatmaps_pred)
 
@@ -170,9 +182,14 @@ def detect_face_and_lndmk(image_path: str, score_threshold: float = 0.3):
     
     for x, y in absolute_landmarks_np:
         output_list.append([float(x), float(y)])
-        
+    
+    total_time = time.time()
     print(f"✅ 検出完了。BBoxスコア: {best_score:.2f}")
-    return output_list
+    print(f"⏱️ 総実行時間: {(total_time - start_time) * 1000:.2f}ms")
+    print(f"=" * 60)
+    
+    # 戻り値: (output_list, best_score)
+    return output_list, float(best_score)
 
 
 if __name__ == "__main__":

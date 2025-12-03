@@ -4,4 +4,3 @@ pillow
 python-multipart
 torch
 torchvision
-matplotlib
