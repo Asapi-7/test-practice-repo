@@ -111,7 +111,7 @@ STAMP_PLACEMENT_RULES = {
         "type": "hat"
     },
     "mimi": {
-        "type": "mimi"
+        "type": "hat"
     },
     "dokuro": {
         "type": "gantai"
