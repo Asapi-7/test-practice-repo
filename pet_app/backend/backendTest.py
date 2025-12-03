@@ -275,7 +275,7 @@ def detect_landmarks_text(image_path: str):
         landmarks = result[2:11]  # インデックス2から10までの9点
         
         face_data = (bbox, score)
-        return face_data, landmarks
+        return face_data, landmarks, result     #resultを返さないとランドマーク表示ボタンが動かない、消しちゃダメ!
     
     else:
         print("モデルが選択されていません")
@@ -323,7 +323,7 @@ def get_landmarks_from_face(image_path: str) -> Dict | None:
             bbox, score = None, None
     
     elif USE_MORI_MODEL or USE_MIZUNUMA_MODEL:
-        face_data, face_landmarks_data = detect_landmarks_text(image_path)
+        face_data, face_landmarks_data, result = detect_landmarks_text(image_path)     #resultを得ないとランドマーク表示ボタンが動かない、消しちゃダメ!
         
         # 顔検出ができなかった時
         if face_data is None or face_landmarks_data is None:
@@ -347,7 +347,7 @@ def get_landmarks_from_face(image_path: str) -> Dict | None:
         "score": score
     }
     # 戻り値は(centers, meta)
-    return centers, meta
+    return centers, meta, result     #resultを返さないとランドマーク表示ボタンが動かない、消しちゃダメ!
 
     # 顔検出はできたけど、ランドマークのテキストデータがおかしい時
     # 顔検出はできたけど、ランドマーク数が足りない時
@@ -383,7 +383,7 @@ async def upload_and_detect_landmarks(file: UploadFile = File(...)):
     
     # MLの推論時間を表示
     ml_start_time = time.time()
-    centers, meta = get_landmarks_from_face(original_image_path)
+    centers, meta, result = get_landmarks_from_face(original_image_path)     #resultを得ないとランドマーク表示ボタンが動かない、消しちゃダメ!
     ml_end_time = time.time()
     print(f"ML推論時間: {(ml_end_time - ml_start_time) * 1000:.2f}ms")
     
@@ -400,7 +400,7 @@ async def upload_and_detect_landmarks(file: UploadFile = File(...)):
     # 勝手に足しました:みうら
     ID_ACCESS_LOG[upload_image_id] = time.time() # アクセス履歴を残す
 
-    landmark_plot = plot_results(original_image_path, meta["raw_points"])
+    landmark_plot = plot_results(original_image_path, result)
     buf = io.BytesIO()                      #データ変換の保存先生成
     landmark_plot.save(buf, format="PNG")   #保存
     buf.seek(0)                             #保存終わったから先頭に戻す(フィルムを先頭に戻す感じ？)
