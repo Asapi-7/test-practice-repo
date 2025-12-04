@@ -113,11 +113,14 @@ STAMP_PLACEMENT_RULES = {
     "effecthone": {
         "type": "kuchi"
     },
-    "dokuro": {
+    "effectatamaribon": {
         "type": "gantai"
     },
     "effectsangurasu": {
         "type": "glasses"
+    },
+    "kirakirabotan": {
+        "type": "kazari"
     }
 }
 
@@ -133,11 +136,6 @@ STAMP_PX = {
     "effectsangurasu": 1280,
 }
 
-# glasses.png 内のレンズ中心座標（元画像 1280x1280 基準）
-GLASS_L_CX = 367  # 左レンズ中心 x
-GLASS_L_CY = 636  # 左レンズ中心 y
-GLASS_R_CX = 926  # 右レンズ中心 x
-GLASS_R_CY = 636  # 右レンズ中心 y
 
 
 # ユーザーからサーバーへのデータ形式を定義
