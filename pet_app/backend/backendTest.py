@@ -506,6 +506,8 @@ async def get_stamp_info(data: StampRequestData):
         needed_width_px = bbox_w * width_factor
         aspect = stamp_h / stamp_w
         hat_h_scaled = needed_width_px * aspect
+        OFFSET_X = 0
+        OFFSET_Y = 0
         if data.stamp_id == "chouchou":
             OFFSET_X = 19      # 右に12px
             OFFSET_Y = 8       # 下に8px（値はお好みで調整OK）
@@ -527,7 +529,7 @@ async def get_stamp_info(data: StampRequestData):
     elif stamp_type == "hana":
         # 1. 0,1 点（bbox）から顔の横幅を計算 → face_w はすでに計算済み
         # 2. bbox の横幅に合わせてスタンプ画像をスケーリング
-        needed_width_px = face_w * 0.31   # 鼻飾りなので少し小さめ（お好みで調整）
+        needed_width_px = face_w * 0.28   # 鼻飾りなので少し小さめ（お好みで調整）
 
         # 3. スケーリング後の高さを計算
         aspect = stamp_h / stamp_w
@@ -548,6 +550,8 @@ async def get_stamp_info(data: StampRequestData):
             # ここでは「最後の 2 点」を 9,10 点とみなす
             p9  = raw_points[-2]
             p10 = raw_points[-1]
+            lm_cx = (p9[0] + p10[0]) / 2
+            lm_cy = (p9[1] + p10[1]) / 2
             center_x = (p9[0] + p10[0]) / 2
             center_y = (p9[1] + p10[1]) / 2
         else:
@@ -563,9 +567,11 @@ async def get_stamp_info(data: StampRequestData):
         aspect = stamp_h / stamp_w
         mouth_h_scaled = needed_width_px * aspect
 
+        offset_x = 0.05 * face_w          # 左右のズレが残るなら 0.02 * face_w とか入れて調整
+        offset_y = 0.0
         # 4. 9,10 点の中点に、スタンプ画像の中心が来るように配置
-        x_left = center_x - needed_width_px / 2
-        y_top  = center_y - mouth_h_scaled / 2
+        x_left = center_x - needed_width_px / 2 + offset_x
+        y_top  = center_y - mouth_h_scaled / 2 + offset_y
 
     elif stamp_type == "kubi":
         # bbox 底辺の中点を求める
