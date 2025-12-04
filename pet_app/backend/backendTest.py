@@ -104,22 +104,19 @@ STAMP_PLACEMENT_RULES = {
     "bousi": {
         "type": "hat"
     },
-    "chouchou": {
+    "effectribon": {
         "type": "hat"
     },
-    "kanmuri": {
-        "type": "hat"
+    "effecthana": {
+        "type": "hana"
     },
-    "mimi": {
-        "type": "hat"
+    "effecthone": {
+        "type": "kuchi"
     },
     "dokuro": {
         "type": "gantai"
     },
-    "glasses": {
-        "type": "glasses"
-    },
-    "sangurasu": {
+    "effectsangurasu": {
         "type": "glasses"
     }
 }
@@ -128,12 +125,12 @@ STAMP_PLACEMENT_RULES = {
 # いらないかもこれ〜〜
 STAMP_PX = {
     "bousi": 1280,
-    "chouchou": 1280,
-    "dokuro": 1280,
+    "effecthana": 1280,
+    "effecthone": 1280,
     "glasses": 1280,
-    "kanmuri": 1280,
+    "effectribon": 1280,
     "mimi": 1280,
-    "sangurasu": 1280,
+    "effectsangurasu": 1280,
 }
 
 # glasses.png 内のレンズ中心座標（元画像 1280x1280 基準）
