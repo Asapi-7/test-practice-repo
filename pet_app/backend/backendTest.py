@@ -111,7 +111,7 @@ STAMP_PLACEMENT_RULES = {
         "type": "hat"
     },
     "mimi": {
-        "type": "mimi"
+        "type": "hat"
     },
     "dokuro": {
         "type": "gantai"
@@ -275,7 +275,7 @@ def detect_landmarks_text(image_path: str):
         landmarks = result[2:11]  # インデックス2から10までの9点
         
         face_data = (bbox, score)
-        return face_data, landmarks
+        return face_data, landmarks, result     #resultを返さないとランドマーク表示ボタンが動かない、消しちゃダメ!
     
     else:
         print("モデルが選択されていません")
@@ -323,7 +323,7 @@ def get_landmarks_from_face(image_path: str) -> Dict | None:
             bbox, score = None, None
     
     elif USE_MORI_MODEL or USE_MIZUNUMA_MODEL:
-        face_data, face_landmarks_data = detect_landmarks_text(image_path)
+        face_data, face_landmarks_data, result = detect_landmarks_text(image_path)     #resultを得ないとランドマーク表示ボタンが動かない、消しちゃダメ!
         
         # 顔検出ができなかった時
         if face_data is None or face_landmarks_data is None:
@@ -347,7 +347,7 @@ def get_landmarks_from_face(image_path: str) -> Dict | None:
         "score": score
     }
     # 戻り値は(centers, meta)
-    return centers, meta
+    return centers, meta, result     #resultを返さないとランドマーク表示ボタンが動かない、消しちゃダメ!
 
     # 顔検出はできたけど、ランドマークのテキストデータがおかしい時
     # 顔検出はできたけど、ランドマーク数が足りない時
@@ -383,7 +383,7 @@ async def upload_and_detect_landmarks(file: UploadFile = File(...)):
     
     # MLの推論時間を表示
     ml_start_time = time.time()
-    centers, meta = get_landmarks_from_face(original_image_path)
+    centers, meta, result = get_landmarks_from_face(original_image_path)     #resultを得ないとランドマーク表示ボタンが動かない、消しちゃダメ!
     ml_end_time = time.time()
     print(f"ML推論時間: {(ml_end_time - ml_start_time) * 1000:.2f}ms")
     
@@ -400,7 +400,7 @@ async def upload_and_detect_landmarks(file: UploadFile = File(...)):
     # 勝手に足しました:みうら
     ID_ACCESS_LOG[upload_image_id] = time.time() # アクセス履歴を残す
 
-    landmark_plot = plot_results(original_image_path, meta["raw_points"])
+    landmark_plot = plot_results(original_image_path, result)
     buf = io.BytesIO()                      #データ変換の保存先生成
     landmark_plot.save(buf, format="PNG")   #保存
     buf.seek(0)                             #保存終わったから先頭に戻す(フィルムを先頭に戻す感じ？)
@@ -503,40 +503,24 @@ async def get_stamp_info(data: StampRequestData):
         y_top  = eye_center_y - glasses_h_scaled / 2
         
     elif stamp_type == "hat":
-        # ===== 帽子：目だけを基準に決める =====
-        eye_center_x = (le["x"] + re["x"]) / 2
-        eye_center_y = (le["y"] + re["y"]) / 2
-        eye_dist = abs(re["x"] - le["x"])
-        needed_width_px = eye_dist * 2.2   # 大きさを変えたいときはここだけいじる
+        bx1, by1, bx2, by2 = bbox  # [xmin, ymin, xmax, ymax]
+        bbox_w = bx2 - bx1
+        bbox_h = by2 - by1
+        bbox_cx = (bx1 + bx2) / 2   # 横方向の中心
+        bbox_top_y = by1            # 上端の y（ここに帽子の底を合わせたい）
+            
+        width_factor = 1.0          # 1.1 とかにすると少し大きくできる
+        needed_width_px = bbox_w * width_factor
         aspect = stamp_h / stamp_w
         hat_h_scaled = needed_width_px * aspect
-        x_left = eye_center_x - needed_width_px / 2
+        if data.stamp_id == "chouchou":
+            OFFSET_X = 19      # 右に12px
+            OFFSET_Y = 8       # 下に8px（値はお好みで調整OK）
 
-        # 縦位置：
-        #   目の高い方の y から、eye_dist の 0.9 倍だけ上に「帽子の中心」を置く
-        eye_top_y = min(le["y"], re["y"])
-        hat_center_y = eye_top_y - eye_dist * 0.9    # 数字を変えると上下に動かせる
+        x_left = bbox_cx - needed_width_px / 2 + OFFSET_X
+        y_top  = bbox_top_y - hat_h_scaled+ OFFSET_Y
 
-        # 画像の中心を hat_center_y に合わせる
-        y_top = hat_center_y - hat_h_scaled * 0.55
 
-    elif stamp_type == "mimi":
-        needed_width_px = face_w * 1.2
-        aspect = stamp_h / stamp_w
-        mimi_h_scaled = needed_width_px * aspect
-        eye_center_x = (le["x"] + re["x"]) / 2
-        eye_center_y = (le["y"] + re["y"]) / 2
-        eye_dist = abs(re["x"] - le["x"])
-        face_ratio = face_h / face_w if face_w > 0 else 1.0
-        if face_ratio > 1.5:
-            k = 1.6
-        elif face_ratio > 1.2:
-            k = 1.3
-        else:
-            k = 1.1
-        x_left = eye_center_x - needed_width_px / 2
-        bottom_y = eye_center_y - eye_dist * k
-        y_top = bottom_y - mimi_h_scaled
 
     elif stamp_type == "gantai":
         # ● 眼帯（左目用）：顔の左寄りの目あたりに置く
