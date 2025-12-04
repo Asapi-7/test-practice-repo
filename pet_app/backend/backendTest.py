@@ -116,6 +116,9 @@ STAMP_PLACEMENT_RULES = {
     "effectsangurasu": {
         "type": "glasses"
     },
+    "mimi": {
+        "type": "hat"
+    },
     "effectribon": {
         "type": "kubi"
     }
@@ -129,6 +132,7 @@ STAMP_PX = {
     "effecthone": 1280,
     "effectribon": 904,
     "effectsangurasu": 1052,
+    "mimi": 915,
     "effectatamaribon": 1112
 }
 
@@ -508,10 +512,7 @@ async def get_stamp_info(data: StampRequestData):
         hat_h_scaled = needed_width_px * aspect
         OFFSET_X = 0
         OFFSET_Y = 0
-        if data.stamp_id == "chouchou":
-            OFFSET_X = 19      # 右に12px
-            OFFSET_Y = 8       # 下に8px（値はお好みで調整OK）
-
+        
         x_left = bbox_cx - needed_width_px / 2 + OFFSET_X
         y_top  = bbox_top_y - hat_h_scaled+ OFFSET_Y
 
