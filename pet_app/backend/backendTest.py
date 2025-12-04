@@ -101,10 +101,10 @@ app.mount("/static", StaticFiles(directory=WWW_DIR), name="static")
 
 # スタンプごとのタイプを設定
 STAMP_PLACEMENT_RULES = {
-    "bousi": {
+    "boushi": {
         "type": "hat"
     },
-    "effectribon": {
+    "effectatamaribon": {
         "type": "hat"
     },
     "effecthana": {
@@ -113,27 +113,23 @@ STAMP_PLACEMENT_RULES = {
     "effecthone": {
         "type": "kuchi"
     },
-    "effectatamaribon": {
-        "type": "gantai"
-    },
     "effectsangurasu": {
         "type": "glasses"
     },
-    "kirakirabotan": {
-        "type": "kazari"
+    "effectribon": {
+        "type": "kubi"
     }
 }
 
 # ちょうどいいスタンプのサイズを計算するために元画像の横幅のpxを設定しておく
 # いらないかもこれ〜〜
 STAMP_PX = {
-    "bousi": 1280,
-    "effecthana": 1280,
+    "boushi": 1000,
+    "effecthana": 100,
     "effecthone": 1280,
-    "glasses": 1280,
-    "effectribon": 1280,
-    "mimi": 1280,
-    "effectsangurasu": 1280,
+    "effectribon": 904,
+    "effectsangurasu": 1052,
+    "effectatamaribon": 1112
 }
 
 
@@ -478,6 +474,8 @@ async def get_stamp_info(data: StampRequestData):
     eye_center_y = (le["y"] + re["y"]) / 2      # 目の中心Y
     nose_mouth_dist = abs(mouth["y"] - nose["y"])
 
+    # 生のランドマーク（9 点）も取り出しておく
+    raw_points = meta.get("raw_points", None)
     # -----------------------------
     # 4) スタンプ種別ごとに位置とサイズを計算
     # -----------------------------
@@ -491,7 +489,7 @@ async def get_stamp_info(data: StampRequestData):
     if stamp_type == "glasses":
         eye_center_x = (le["x"] + re["x"]) / 2
         eye_center_y = (le["y"] + re["y"]) / 2
-        needed_width_px = face_w * 0.85
+        needed_width_px = face_w * 0.90
         aspect = stamp_h / stamp_w
         glasses_h_scaled = needed_width_px * aspect
         x_left = eye_center_x - needed_width_px / 2
@@ -515,8 +513,6 @@ async def get_stamp_info(data: StampRequestData):
         x_left = bbox_cx - needed_width_px / 2 + OFFSET_X
         y_top  = bbox_top_y - hat_h_scaled+ OFFSET_Y
 
-
-
     elif stamp_type == "gantai":
         # ● 眼帯（左目用）：顔の左寄りの目あたりに置く
         needed_width_px = face_w * 0.60
@@ -527,7 +523,72 @@ async def get_stamp_info(data: StampRequestData):
         x_left = left_eye_cx - needed_width_px / 2
         y_top  = left_eye_cy - patch_h_scaled / 2
         
-    
+    # ⑥ 鼻の飾り
+    elif stamp_type == "hana":
+        # 1. 0,1 点（bbox）から顔の横幅を計算 → face_w はすでに計算済み
+        # 2. bbox の横幅に合わせてスタンプ画像をスケーリング
+        needed_width_px = face_w * 0.31   # 鼻飾りなので少し小さめ（お好みで調整）
+
+        # 3. スケーリング後の高さを計算
+        aspect = stamp_h / stamp_w
+        nose_h_scaled = needed_width_px * aspect
+
+        # 4. ランドマーク 6 点（centers["nose"]）の位置に
+        #    スタンプ画像の「中心」が来るように配置
+        center_x = nose["x"]
+        center_y = nose["y"]
+
+        x_left = center_x - needed_width_px / 2
+        y_top  = center_y - nose_h_scaled / 2
+
+    # ⑤ 口の飾り（ひげ・骨など）
+    elif stamp_type == "kuchi":
+        # raw_points があれば、9・10 点の中点を使う
+        if isinstance(raw_points, list) and len(raw_points) >= 9:
+            # ここでは「最後の 2 点」を 9,10 点とみなす
+            p9  = raw_points[-2]
+            p10 = raw_points[-1]
+            center_x = (p9[0] + p10[0]) / 2
+            center_y = (p9[1] + p10[1]) / 2
+        else:
+            # 万一 raw_points が無い場合は、従来どおり mouth 中心を使う
+            center_x = mouth["x"]
+            center_y = mouth["y"]
+
+        # 2. スタンプ画像をスケーリング（スケーリング方法はおまかせでよいとのことなので、
+        #    顔幅の 30% くらいに設定）
+        needed_width_px = face_w * 0.60
+
+        # 3. スケーリング後の高さを計算
+        aspect = stamp_h / stamp_w
+        mouth_h_scaled = needed_width_px * aspect
+
+        # 4. 9,10 点の中点に、スタンプ画像の中心が来るように配置
+        x_left = center_x - needed_width_px / 2
+        y_top  = center_y - mouth_h_scaled / 2
+
+    elif stamp_type == "kubi":
+        # bbox 底辺の中点を求める
+        bx1, by1, bx2, by2 = bbox 
+        bbox_w = bx2 - bx1
+        center_bottom_x = (bx1 + bx2) / 2 
+        bottom_y = by2
+
+        # 1. 0と1点から bbox の横幅はすでに bbox_w で計算済み
+        # 2. bboxの横幅に合わせてスタンプ画像をスケーリング
+        width_factor = 0.5    # 顔幅のどれくらいにするか（0.4〜0.6で微調整）
+        needed_width_px = bbox_w * width_factor
+
+        # 3. スケーリングした画像の高さを取得
+        aspect = stamp_h / stamp_w
+        ribbon_h_scaled = needed_width_px * aspect
+
+        # 4. bbox の下側の中点と、スタンプ画像の「上側の中点」が一致するように配置
+        #    → 上側の中点 = (x_left + needed_width_px/2, y_top)
+        #       これを (center_bottom_x, bottom_y) に合わせる
+        x_left = center_bottom_x - needed_width_px / 2
+        y_top  = bottom_y
+
     else:
         # その他スタンプ（鼻あたり）
         needed_width_px = eye_dist * 1.0
