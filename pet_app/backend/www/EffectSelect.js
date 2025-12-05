@@ -37,6 +37,11 @@ async function EffectSelect(effectName){
     }
     const result = await requestEffect(userRequest);    //手紙を送って、返信を格納できるまで少し待つ
 
+    if (!result) {
+        console.log("result が null です");
+        return;
+    }
+
     if(result.detail){
         console.log("エラーってるよ!backで!");
         alert(result.detail);
@@ -52,18 +57,18 @@ async function EffectSelect(effectName){
         
         const baseScale = UserImageScale ?? 1;
         
-        if (effectName === "kiraeffect") {
-            const drawW = ImageSpace.width;
-            const drawH = ImageSpace.height;
-            context.drawImage(
-                effectImg,
-                0,          
-                0,
-                drawW,
-                drawH
-            );
-            return;         // ここで終了（下の通常処理には行かない）
-            }
+        //if (effectName === "kiraeffect") {
+            //const drawW = ImageSpace.width;
+            //const drawH = ImageSpace.height;
+            //context.drawImage(
+                //effectImg,
+                //0,          
+                //0,
+                //drawW,
+                //drawH
+            //);
+            //return;         // ここで終了（下の通常処理には行かない）
+            //}
         // バックエンドから来る座標は「元画像基準」なので、
     // キャンバス上では baseScale 倍してあげる    
         const effectX = result["x"] * baseScale;
@@ -79,8 +84,6 @@ async function EffectSelect(effectName){
             effectImg.height * effectScale
         );
     };
-    effectImg.src = result["stamp_image"];
-
 }
 
 // ★これを一番下に追加！
