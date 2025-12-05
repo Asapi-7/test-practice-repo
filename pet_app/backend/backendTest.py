@@ -624,8 +624,8 @@ async def get_stamp_info(data: StampRequestData):
         base_width_px = stamp_w
 
     scale = needed_width_px / base_width_px
-    x_int = max(0, int(x_left))
-    y_int = max(0, int(y_top))
+    x_int = int(round(x_left))
+    y_int = int(round(y_top))
 
     # アクセスログ更新
     ID_ACCESS_LOG[data.upload_image_id] = time.time()
