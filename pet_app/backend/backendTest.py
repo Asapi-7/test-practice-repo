@@ -124,6 +124,9 @@ STAMP_PLACEMENT_RULES = {
     },
     "effectribon": {
         "type": "kubi"
+    },
+    "kiraeffect": {
+        "type": "kira"
     }
 }
 
@@ -137,7 +140,8 @@ STAMP_PX = {
     "effectsangurasu": 1052,
     "mimi": 915,
     "effectatamaribon": 1112,
-    "effecteye": 978
+    "effecteye": 978,
+    "kiraeffect":1536
 }
 
 
@@ -609,6 +613,11 @@ async def get_stamp_info(data: StampRequestData):
         #       これを (center_bottom_x, bottom_y) に合わせる
         x_left = center_bottom_x - needed_width_px / 2
         y_top  = bottom_y
+
+    elif stamp_type == "kira":
+        needed_width_px = STAMP_PX.get(data.stamp_id, stamp_w)
+        x_left = 0
+        y_top  = 0
 
     else:
         # その他スタンプ（鼻あたり）
