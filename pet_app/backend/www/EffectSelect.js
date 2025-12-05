@@ -48,43 +48,45 @@ async function EffectSelect(effectName){
     const effectImg = new Image();
     effectImg.src = result["stamp_image"];                     //エフェクト画像の読み込み開始
     //変更したよ
-    effectImg.onload = () => {                                  // 読み込み完了後、バックエンドの指示通りに画像を描画
-    // 元画像 → キャンバスの拡大率（ImageImport.js で保存した値）
-    const baseScale = UserImageScale ?? 1;
-
-    // ★★ kiraeffect は全面エフェクトにしたいので特別扱い ★★
-    if (effectName === "kiraeffect") {
-        // x, y, scale は無視して、キャンバス全体に引き伸ばして描画
-        const drawW = ImageSpace.width;
-        const drawH = ImageSpace.height;
-
+    effectImg.onload = () => {
+        
+        const baseScale = UserImageScale ?? 1;
+        
+        if (effectName === "kiraeffect") {
+            const drawW = ImageSpace.width;
+            const drawH = ImageSpace.height;
+            context.drawImage(
+                effectImg,
+                0,          
+                0,
+                drawW,
+                drawH
+            );
+            return;         // ここで終了（下の通常処理には行かない）
+            }
+        // バックエンドから来る座標は「元画像基準」なので、
+    // キャンバス上では baseScale 倍してあげる    
+        const effectX = result["x"] * baseScale;
+        const effectY = result["y"] * baseScale;
+        
+        const effectScale = result["scale"] * baseScale;
+        
         context.drawImage(
             effectImg,
-            0,          // 左上に固定
-            0,
-            drawW,      // キャンバス幅いっぱい
-            drawH       // キャンバス高さいっぱい
+            effectX,
+            effectY,
+            effectImg.width  * effectScale,
+            effectImg.height * effectScale
         );
-        return;         // ここで終了（下の通常処理には行かない）
-    }
+    };
+    effectImg.src = result["stamp_image"];
 
-    // バックエンドから来る座標は「元画像基準」なので、
-    // キャンバス上では baseScale 倍してあげる
-    const effectX = result["x"] * baseScale;
-    const effectY = result["y"] * baseScale;
-
-    // scale も元画像基準なので、ここでも baseScale を掛ける
-    const effectScale = result["scale"] * baseScale;
-
-    context.drawImage(
-        effectImg,
-        effectX,
-        effectY,
-        effectImg.width  * effectScale,
-        effectImg.height * effectScale
-    );
 }
 
+// ★これを一番下に追加！
+function handleClick(effectName){
+    console.log("handleClick:", effectName);
+    EffectSelect(effectName);
 }
 
 //UserImageScaleが加工する画像の倍率です
