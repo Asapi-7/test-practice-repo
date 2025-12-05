@@ -628,7 +628,7 @@ async def get_stamp_info(data: StampRequestData):
 
         # 3. 「顔の長いほうの辺」の 2.5 倍ぐらいに広げて、周りも覆うようにする
         face_long = max(face_w, face_h)
-        needed_width_px = face_long * 2.5
+        needed_width_px = face_long * 2.0
 
         # 4. スタンプ画像の縦横比に合わせて高さを決める
         aspect = stamp_h / stamp_w
