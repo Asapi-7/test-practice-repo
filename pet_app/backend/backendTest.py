@@ -176,8 +176,8 @@ def get_center_landmarks(points: List[List[float]]) -> Dict:
     nose_x, nose_y = points[4] # 鼻
     mouth_right_x, mouth_right_y = points[5] # 口右端
     mouth_left_x, mouth_left_y = points[6] # 口左端
-    nose_to_mouth_x, nose_to_mouth_y = points[7] # 鼻と口の間の点
-    mouth_center_x, mouth_center_y = points[8] # 口中央
+    nose_to_mouth_x, nose_to_mouth_y = points[7] # 口上端
+    mouth_center_x, mouth_center_y = points[8] # 口下端
 
     # 右目の中心座標を計算
     right_eye_x = (right_eye_right_x + right_eye_left_x) / 2
@@ -565,14 +565,14 @@ async def get_stamp_info(data: StampRequestData):
     # ⑤ 口の飾り（ひげ・骨など）
     elif stamp_type == "kuchi":
         # raw_points があれば、9・10 点の中点を使う
-        if isinstance(raw_points, list) and len(raw_points) >= 9:
-            # ここでは「最後の 2 点」を 9,10 点とみなす
-            p9  = raw_points[-2]
-            p10 = raw_points[-1]
-            lm_cx = (p9[0] + p10[0]) / 2
-            lm_cy = (p9[1] + p10[1]) / 2
+        if isinstance(raw_points, list) and len(raw_points) >= 11:
+            p7  = raw_points[5]   # 口 左端
+            p8  = raw_points[6]   # 口 右端
+            p9  = raw_points[7]   # 口 上
+            p10 = raw_points[8]  # 口 下
+
             center_x = (p9[0] + p10[0]) / 2
-            center_y = (p9[1] + p10[1]) / 2
+            center_y = (p7[1] + p8[1]) / 2
         else:
             # 万一 raw_points が無い場合は、従来どおり mouth 中心を使う
             center_x = mouth["x"]
@@ -580,13 +580,13 @@ async def get_stamp_info(data: StampRequestData):
 
         # 2. スタンプ画像をスケーリング（スケーリング方法はおまかせでよいとのことなので、
         #    顔幅の 30% くらいに設定）
-        needed_width_px = face_w * 0.60
+        needed_width_px = face_w * 0.70
 
         # 3. スケーリング後の高さを計算
         aspect = stamp_h / stamp_w
         mouth_h_scaled = needed_width_px * aspect
 
-        offset_x = 0.05 * face_w          # 左右のズレが残るなら 0.02 * face_w とか入れて調整
+        offset_x = 0.0         # 左右のズレが残るなら 0.02 * face_w とか入れて調整
         offset_y = 0.0
         # 4. 9,10 点の中点に、スタンプ画像の中心が来るように配置
         x_left = center_x - needed_width_px / 2 + offset_x
