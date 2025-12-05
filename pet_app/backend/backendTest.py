@@ -119,6 +119,9 @@ STAMP_PLACEMENT_RULES = {
     "mimi": {
         "type": "hat"
     },
+    "effecteye": {
+        "type": "eye"
+    },
     "effectribon": {
         "type": "kubi"
     }
@@ -133,7 +136,8 @@ STAMP_PX = {
     "effectribon": 904,
     "effectsangurasu": 1052,
     "mimi": 915,
-    "effectatamaribon": 1112
+    "effectatamaribon": 1112,
+    "effecteye": 978
 }
 
 
@@ -498,6 +502,15 @@ async def get_stamp_info(data: StampRequestData):
         glasses_h_scaled = needed_width_px * aspect
         x_left = eye_center_x - needed_width_px / 2
         y_top  = eye_center_y - glasses_h_scaled / 2
+
+    elif stamp_type == "eye":
+        eye_center_x = (le["x"] + re["x"]) / 2
+        eye_center_y = (le["y"] + re["y"]) / 2
+        needed_width_px = face_w * 0.80
+        aspect = stamp_h / stamp_w
+        glasses_h_scaled = needed_width_px * aspect
+        x_left = eye_center_x - needed_width_px / 2
+        y_top  = eye_center_y - glasses_h_scaled / 2
         
     elif stamp_type == "hat":
         bx1, by1, bx2, by2 = bbox  # [xmin, ymin, xmax, ymax]
@@ -512,9 +525,10 @@ async def get_stamp_info(data: StampRequestData):
         hat_h_scaled = needed_width_px * aspect
         OFFSET_X = 0
         OFFSET_Y = 0
-        
-        x_left = bbox_cx - needed_width_px / 2 + OFFSET_X
-        y_top  = bbox_top_y - hat_h_scaled+ OFFSET_Y
+        x_center = bbox_cx + OFFSET_X
+        y_bottom = bbox_top_y + OFFSET_Y
+        x_left = x_center - needed_width_px / 2 
+        y_top  = y_bottom - hat_h_scaled
 
     elif stamp_type == "gantai":
         # ● 眼帯（左目用）：顔の左寄りの目あたりに置く
