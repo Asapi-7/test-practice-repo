@@ -615,9 +615,28 @@ async def get_stamp_info(data: StampRequestData):
         y_top  = bottom_y
 
     elif stamp_type == "kira":
-        needed_width_px = STAMP_PX.get(data.stamp_id, stamp_w)
-        x_left = 0
-        y_top  = 0
+        # ★ ランドマーク・bbox を使って「顔のだいぶ周りまで」覆うエフェクトにする
+
+        # 1. 顔の bbox 情報（他のスタンプでも使っているやつ）
+        bx1, by1, bx2, by2 = bbox  # [xmin, ymin, xmax, ymax]
+        face_w = bx2 - bx1
+        face_h = by2 - by1
+
+        # 2. 顔の中心座標
+        face_cx = (bx1 + bx2) / 2
+        face_cy = (by1 + by2) / 2
+
+        # 3. 「顔の長いほうの辺」の 2.5 倍ぐらいに広げて、周りも覆うようにする
+        face_long = max(face_w, face_h)
+        needed_width_px = face_long * 2.5
+
+        # 4. スタンプ画像の縦横比に合わせて高さを決める
+        aspect = stamp_h / stamp_w
+        kira_h_scaled = needed_width_px * aspect
+
+        # 5. 顔の中心にスタンプの中心が来るように、左上座標を決める
+        x_left = face_cx - needed_width_px / 2
+        y_top  = face_cy - kira_h_scaled / 2
 
     else:
         # その他スタンプ（鼻あたり）
