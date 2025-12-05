@@ -52,6 +52,22 @@ async function EffectSelect(effectName){
     // 元画像 → キャンバスの拡大率（ImageImport.js で保存した値）
     const baseScale = UserImageScale ?? 1;
 
+    // ★★ kiraeffect は全面エフェクトにしたいので特別扱い ★★
+    if (effectName === "kiraeffect") {
+        // x, y, scale は無視して、キャンバス全体に引き伸ばして描画
+        const drawW = ImageSpace.width;
+        const drawH = ImageSpace.height;
+
+        context.drawImage(
+            effectImg,
+            0,          // 左上に固定
+            0,
+            drawW,      // キャンバス幅いっぱい
+            drawH       // キャンバス高さいっぱい
+        );
+        return;         // ここで終了（下の通常処理には行かない）
+    }
+
     // バックエンドから来る座標は「元画像基準」なので、
     // キャンバス上では baseScale 倍してあげる
     const effectX = result["x"] * baseScale;
