@@ -135,7 +135,7 @@ STAMP_PLACEMENT_RULES = {
 STAMP_PX = {
     "boushi": 1000,
     "effecthana": 100,
-    "effecthone": 1280,
+    "effecthone": 1024,
     "effectribon": 904,
     "effectsangurasu": 1052,
     "mimi": 915,
@@ -564,15 +564,14 @@ async def get_stamp_info(data: StampRequestData):
 
     # ⑤ 口の飾り（ひげ・骨など）
     elif stamp_type == "kuchi":
-        # raw_points があれば、9・10 点の中点を使う
-        if isinstance(raw_points, list) and len(raw_points) >= 11:
-            p7  = raw_points[5]   # 口 左端
-            p8  = raw_points[6]   # 口 右端
-            p9  = raw_points[7]   # 口 上
-            p10 = raw_points[8]  # 口 下
-
-            center_x = (p9[0] + p10[0]) / 2
-            center_y = (p7[1] + p8[1]) / 2
+        if isinstance(raw_points, list) and len(raw_points) >= 9:
+            mouth_left  = raw_points[5]
+            mouth_right = raw_points[6]
+            mouth_up    = raw_points[7]
+            mouth_down  = raw_points[8]
+            
+            center_x = (mouth_left[0] + mouth_right[0]) / 2.0
+            center_y = (mouth_up[1]   + mouth_down[1]) / 2.0
         else:
             # 万一 raw_points が無い場合は、従来どおり mouth 中心を使う
             center_x = mouth["x"]
@@ -580,7 +579,7 @@ async def get_stamp_info(data: StampRequestData):
 
         # 2. スタンプ画像をスケーリング（スケーリング方法はおまかせでよいとのことなので、
         #    顔幅の 30% くらいに設定）
-        needed_width_px = face_w * 0.70
+        needed_width_px = face_w * 0.80
 
         # 3. スケーリング後の高さを計算
         aspect = stamp_h / stamp_w
