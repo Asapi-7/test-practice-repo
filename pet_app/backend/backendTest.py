@@ -127,6 +127,48 @@ STAMP_PLACEMENT_RULES = {
     },
     "kiraeffect": {
         "type": "kira"
+    },
+    "cat": {
+        "type": "hat"
+    },
+    "eye1": {
+        "type": "eye"
+    },
+    "eye2": {
+        "type": "eye"
+    },
+    "glassguruguru": {
+        "type": "glasses"
+    },
+    "hige": {
+        "type": "kuchi"
+    },
+    "hoippu": {
+        "type": "hat"
+    },
+    "nekonose": {
+        "type": "hana"
+    },
+    "nekutai": {
+        "type": "kubi"
+    },
+    "nezumi": {
+        "type": "hat"
+    },
+    "santa": {
+        "type": "hat"
+    },
+    "synglasshosi": {
+        "type": "glasses"
+    },
+    "star": {
+        "type": "hat"
+    },
+    "suzu": {
+        "type": "kubi"
+    },
+    "tuno": {
+        "type": "hat"
     }
 }
 
@@ -141,7 +183,21 @@ STAMP_PX = {
     "mimi": 915,
     "effectatamaribon": 1112,
     "effecteye": 978,
-    "kiraeffect":1536
+    "kiraeffect":1536,
+    "cat":900,
+    "eye1":950,
+    "eye2":950,
+    "glassguruguru":1000,
+    "hige":155,
+    "hoippu":1000,
+    "nekonose":266,
+    "nekutai":396,
+    "nezumi":900,
+    "santa":1000,
+    "star":1000,
+    "sunglasshosi":1000,
+    "suzu":900,
+    "tuno":900
 }
 
 
