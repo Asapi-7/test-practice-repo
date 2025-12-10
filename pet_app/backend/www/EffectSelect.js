@@ -12,7 +12,7 @@ async function EffectSelect(effectName){
             const result = await response.json();
             return result;
         }catch(error){
-            console.error('送れなかったよ:',error);
+            console.error('送れなかったよ:',error.message);
             return null
             }
         }
@@ -42,48 +42,101 @@ async function EffectSelect(effectName){
         return;
     }
 
+    if (!result) {
+        console.log("result が null です");
+        return;
+    }
+
     if(result.detail){
         console.log("エラーってるよ!backで!");
         alert(result.detail);
         return;
     }
-    
+
     const ImageSpace = document.getElementById('ImageSpace');   //描画領域となるcanvasを指定
     const context = ImageSpace.getContext('2d');                //2D描画用のコンテキストを取得
     const effectImg = new Image();
     effectImg.src = result["stamp_image"];                     //エフェクト画像の読み込み開始
-    //変更したよ
+    
+    // 変更したよ
     effectImg.onload = () => {
-        
         const baseScale = UserImageScale ?? 1;
+
+    //     //if (effectName === "kiraeffect") {
+    //         //const drawW = ImageSpace.width;
+    //         //const drawH = ImageSpace.height;
+    //         //context.drawImage(
+    //             //effectImg,
+    //             //0,          
+    //             //0,
+    //             //drawW,
+    //             //drawH
+    //         //);
+    //         //return;         // ここで終了（下の通常処理には行かない）
+    //         //}
+    //     // バックエンドから来る座標は「元画像基準」なので、
+    // // キャンバス上では baseScale 倍してあげる    
+    //     const effectX = result["x"] * baseScale;
+    //     const effectY = result["y"] * baseScale;
         
-        //if (effectName === "kiraeffect") {
-            //const drawW = ImageSpace.width;
-            //const drawH = ImageSpace.height;
-            //context.drawImage(
-                //effectImg,
-                //0,          
-                //0,
-                //drawW,
-                //drawH
-            //);
-            //return;         // ここで終了（下の通常処理には行かない）
-            //}
-        // バックエンドから来る座標は「元画像基準」なので、
-    // キャンバス上では baseScale 倍してあげる    
-        const effectX = result["x"] * baseScale;
-        const effectY = result["y"] * baseScale;
+    //     const effectScale = result["scale"] * baseScale;
         
+    //     context.drawImage(
+    //         effectImg,
+    //         effectX,
+    //         effectY,
+    //         effectImg.width  * effectScale,
+    //         effectImg.height * effectScale
+    //     );
+
+        // 角度計算用に追加しました。続きます。（高井良）
+        // バックエンドから中心点が送られる
+        const centerX = result["x"] * baseScale;
+        const centerY = result["y"] * baseScale;
+
         const effectScale = result["scale"] * baseScale;
+
+        // エフェクト角度調整用
+        const angle = result["angle"] || 0;
+
+        // 回転のために幅と高さが必要なので計算
+        const drawWidth = effectImg.width * effectScale;
+        const drawHeight = effectImg.height * effectScale;
+
+        // サーバーから指定された「画像のどこを中心にするか」の情報
+        // なければ0.5（真ん中）を使う
+        let rotationCenterX = result["rotation_center_x"] ?? 0.5; 
+        let rotationCenterY = result["rotation_center_y"] ?? 0.5; 
         
+        // 回転の中心点のオフセットを計算
+        // 画像の左上からどれくらいズレた場所を軸にするか
+        const rotationCenterXPX = drawWidth * rotationCenterX;
+        const rotationCenterYPX = drawHeight * rotationCenterY;
+
+        // 描画設定を保存
+        context.save();
+
+        // キャンバスの原点を計算した中心軸に移動
+        context.translate(centerX, centerY);
+
+        // 回転させる
+        const radian = angle * (Math.PI / 180);
+        context.rotate(radian);
+
+        // 画像を描画
+        // 原点を回転の中心点に移動させていたので、そこからオフセット分戻した位置に描画する
         context.drawImage(
             effectImg,
-            effectX,
-            effectY,
-            effectImg.width  * effectScale,
-            effectImg.height * effectScale
+            -rotationCenterXPX,
+            -rotationCenterYPX,
+            drawWidth,
+            drawHeight
         );
-    };
+
+        // 描画設定を元に戻す
+        context.restore();
+        // 角度計算用ここまで（高井良）
+    }
 }
 
 // ★これを一番下に追加！
