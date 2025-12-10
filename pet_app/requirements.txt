@@ -1,7 +1,7 @@
 fastapi
-uvicorn
+matplotlib
 pillow
 python-multipart
 torch
 torchvision
-matplotlib
+uvicorn

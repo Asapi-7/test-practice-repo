@@ -50,7 +50,7 @@ async function EffectSelect(effectName){
     //変更したよ
     effectImg.onload = () => {                                  // 読み込み完了後、バックエンドの指示通りに画像を描画
     // 元画像 → キャンバスの拡大率（ImageImport.js で保存した値）
-    const baseScale = UserImageScale ?? 1;
+    const baseScale = UserImageScale;
 
     // バックエンドから来る座標は「元画像基準」なので、
     // キャンバス上では baseScale 倍してあげる
