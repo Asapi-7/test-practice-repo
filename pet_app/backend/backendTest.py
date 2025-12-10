@@ -37,7 +37,7 @@ if USE_NAKAYAMA_MODEL:
     from .ml_model import detect_face, load_ml_model
 
 elif USE_MORI_MODEL:
-    from .detect import load_ml_model, detect_face_and_lndmk
+    from .detect2 import load_ml_model, detect_face_and_lndmk
 
 elif USE_MIZUNUMA_MODEL:
     from .mizunuma_model import load_ml_model, detect_face_and_lndmk
@@ -327,7 +327,7 @@ def detect_landmarks_text(image_path: str):
         
         if result_data is None:
             print("⚠️ detect_face_and_lndmk が顔を検出できませんでした。")
-            return None, None
+            return None, None, None
         
         result, score = result_data
         
@@ -354,62 +354,16 @@ def detect_landmarks_text(image_path: str):
 # 画像からランドマークを検出する
 def get_landmarks_from_face(image_path: str) -> Dict | None:
     
-    # モデルごとの処理分岐
-    if USE_NAKAYAMA_MODEL:
-        # MLモデルで顔枠を検出（返り値: (bbox, score), raw_landmark_text/list ）
-        face_data, ML_LANDMARK_TEXT = detect_landmarks_text(image_path)
-        
-        # 顔検出ができなかった時
-        if face_data is None:
-            print("❌ MLモデルが顔を検出できませんでした。")
-            return None, None
-        
-        # ランドマーク文字列またはリストから座標リストを作る
-        face_landmarks_data = None
-        if isinstance(ML_LANDMARK_TEXT, str):
-            face_landmarks_data = landmark_text_to_list(ML_LANDMARK_TEXT)
-        elif isinstance(ML_LANDMARK_TEXT, list):
-            face_landmarks_data = ML_LANDMARK_TEXT
-        else:
-            print("❌ランドマーク情報が見つかりません。")
-            return None, None
+    # Moriモデル専用（USE_MORI_MODELのみTrueで動作）
+    face_data, face_landmarks_data, result = detect_landmarks_text(image_path)
+    # 顔検出ができなかった時
+    if face_data is None or face_landmarks_data is None:
+        print("❌ MLモデルが顔を検出できませんでした。")
+        return None, None, None
 
-        if not face_landmarks_data:
-            print("❌ランドマークのパースに失敗しました。")
-            return None, None
-
-        if len(face_landmarks_data) != 9:
-            print(f"❌ランドマークは９点必要です。検出数: {len(face_landmarks_data)}")
-            return None, None
-
-        centers = get_center_landmarks(face_landmarks_data)
-        
-        # bboxとscoreを取得
-        try:
-            bbox, score = face_data
-            print(f"✅MLモデルが顔を検出し、ランドマークを計算しました。score={score: .2f}")
-        except Exception:
-            bbox, score = None, None
-    
-    elif USE_MORI_MODEL or USE_MIZUNUMA_MODEL:
-        face_data, face_landmarks_data, result = detect_landmarks_text(image_path)     #resultを得ないとランドマーク表示ボタンが動かない、消しちゃダメ!
-        
-        # 顔検出ができなかった時
-        if face_data is None or face_landmarks_data is None:
-            print("❌ MLモデルが顔を検出できませんでした。")
-            return None, None
-        
-        # bboxとscoreを取得
-        bbox, score = face_data
-        print(f"✅MLモデルが顔を検出し、ランドマークを計算しました。score={score: .2f}")
-
-        # bboxを渡してランドマーク辞書を作成
-        centers = get_center_landmarks(face_landmarks_data, bbox)
-    
-    else:
-        print("❌ モデルが選択されていません。")
-        return None, None
-
+    bbox, score = face_data
+    print(f"✅MLモデルが顔を検出し、ランドマークを計算しました。score={score: .2f}")
+    centers = get_center_landmarks(face_landmarks_data, bbox)
     meta = {
         "raw_points": face_landmarks_data,
         "bbox": bbox,
@@ -1092,54 +1046,3 @@ async def get_stamp_info(data: StampRequestData):
         "stamp_image": stamp_image_b64
     })
 
-    # ======加えたよ===================================================
-# 10. フロントファイルをアップロードするエンドポイント
-#
-# フロント班はここに pet.html / JSファイル をPOSTするだけでいい。
-# そうするとサーバー側の www/ に保存される。
-#
-# curl例:
-# curl -X POST "http://localhost:8000/upload_static_files" \
-#   -F "files=@pet.html" \
-#   -F "files=@EffectSelect.js" \
-#   -F "files=@ImageDownload.js" \
-#   -F "files=@ImageImport.js"
-#
-# 成功後は:
-#   http://localhost:8000/static/pet.html
-# でブラウザ表示できるようになる。
-# =========================================================
-@app.post("/upload_static_files", tags=["0. Frontend Static Upload"])
-async def upload_static_files(files: List[UploadFile] = File(...)):
-    
-    saved_urls: List[str] = []
-
-    for uploaded in files:
-        # ファイル名だけ取り出す（"C:\\path\\to\\pet.html" みたいなのを防ぐ）
-        filename = os.path.basename(uploaded.filename)
-
-        if not filename:
-            raise HTTPException(status_code=400, detail="File has no name")
-
-        # 拡張子チェック：.html / .js 以外は拒否（安全のため）
-        _, ext = os.path.splitext(filename.lower())
-        if ext not in [".html", ".htm", ".js", ".css", ".png", ".jpg", ".jpeg", ".gif"]:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Extension not allowed: {ext}"
-            )
-
-        # 保存先は www/<filename>
-        dest_path = os.path.join(WWW_DIR, filename)
-
-        # アップロード内容を保存
-        with open(dest_path, "wb") as out_file:
-            shutil.copyfileobj(uploaded.file, out_file)
-
-        # 後で確認しやすいように、公開URLも返す
-        saved_urls.append(f"/static/{filename}")
-    return JSONResponse(content={
-        "status": "ok",
-        "uploaded_files": saved_urls,
-        "hint": "ブラウザで /static/pet.html を開いて動作確認してください。"
-    })
