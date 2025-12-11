@@ -347,7 +347,7 @@ async def get_stamp_info(data: StampRequestData):
     filename = data.stamp_id
 
     # メガネと目については横顔の時片目用の画像を使う
-    if yokogao and (data.stamp_id == "glassguruguru" or data.stamp_id == "effectsangurasu" or data.stamp_id == "eye1" or data.stamp_id == "sunglasshosi"):
+    if yokogao and (data.stamp_id == "effectsangurasu" or data.stamp_id == "sangurasuA" or data.stamp_id == "sangurasuB" or data.stamp_id == "eye1"):
         if nose["x"] > face_cx: # 右向き
             filename = f"{data.stamp_id}_migi"
         else: # 左向き
@@ -410,7 +410,7 @@ async def get_stamp_info(data: StampRequestData):
         y_top  = eye_center_y - needed_width_px/2
 
         if stamp_type == "glasses":
-            if data.stamp_id == "glassguruguru" or data.stamp_id == "effectsangurasu" or data.stamp_id == "sunglasshosi":
+            if data.stamp_id == "effectsangurasu" or data.stamp_id == "sangurasuA" or data.stamp_id == "sungrasuB":
                 if nose["x"] > face_cx: # 右向き
                     target_eye = le
                 else:
@@ -551,7 +551,7 @@ async def get_stamp_info(data: StampRequestData):
             #    顔幅の 30% くらいに設定）
             needed_width_px = face_w * 0.80
 
-             if data.stamp_id == "mouseB":
+            if data.stamp_id == "mouseB":
                 needed_width_px = face_w * 0.50
             # 3. スケーリング後の高さを計算
             aspect = stamp_h / stamp_w
