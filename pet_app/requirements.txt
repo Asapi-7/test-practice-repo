@@ -1,7 +1,9 @@
 fastapi
-uvicorn
+matplotlib
 pillow
 python-multipart
+scikit-learn
 torch
 torchvision
-matplotlib
+tqdm
+uvicorn

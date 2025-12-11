@@ -1,6 +1,7 @@
 import os
 import uuid
 import shutil
+import math # 角度計算用に追加しました（高井良）
 
 # 書き加えた
 from typing import Dict, List, Tuple
@@ -23,28 +24,10 @@ from PIL import Image
 import base64
 #
 
-import re
 import json
 
-# モデルを切り替える
-USE_NAKAYAMA_MODEL = False
-USE_MORI_MODEL = True
-USE_MIZUNUMA_MODEL = False
-
-# モデル別のインポートと定義
-if USE_NAKAYAMA_MODEL:
-    from .ml_model import detect_face, load_ml_model
-
-elif USE_MORI_MODEL:
-    from .detect import load_ml_model, detect_face_and_lndmk
-
-elif USE_MIZUNUMA_MODEL:
-    from .mizunuma_model import load_ml_model, detect_face_and_lndmk
-
-def encode_image_to_base64(image_path: str) -> str:
-    with open(image_path, "rb") as image_file:
-        encoded_bytes = base64.b64encode(image_file.read())
-        return f"data:image/png;base64,{encoded_bytes.decode('utf-8')}"
+#detect2.pyから機械学習モデルを読み込む
+from .detect2 import load_ml_model, detect_face_and_lndmk
 
 # 勝手に足しました：みうら
 ID_ACCESS_LOG = {}
@@ -53,7 +36,6 @@ ID_ACCESS_LOG = {}
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # サーバー起動時にMLモデルをロードする
-
     load_ml_model()
 
     task = asyncio.create_task(cleanup_id())
@@ -117,82 +99,104 @@ STAMP_PLACEMENT_RULES = {
         "type": "glasses"
     },
     "mimi": {
-        "type": "hat"
+        "type": "mimi" # 横顔用に修正しました（高井良）
     },
     "effecteye": {
         "type": "eye"
     },
     "effectribon": {
         "type": "kubi"
+    },
+    "kiraeffect": {
+        "type": "kira"
+    },
+    "cat": {
+        "type": "hat"
+    },
+    "eye1": {
+        "type": "eye"
+    },
+    "eye2": {
+        "type": "eye"
+    },
+    "glassguruguru": {
+        "type": "glasses"
+    },
+    "hige": {
+        "type": "kuchi"
+    },
+    "hoippu": {
+        "type": "hat"
+    },
+    "nekonose": {
+        "type": "hana"
+    },
+    "nekutai": {
+        "type": "kubi"
+    },
+    "nezumi": {
+        "type": "mimi"
+    },
+    "santa": {
+        "type": "hat"
+    },
+    "sunglasshosi": {
+        "type": "glasses"
+    },
+    "star": {
+        "type": "mimi"
+    },
+    "suzu": {
+        "type": "kubi"
+    },
+    "tuno": {
+        "type": "mimi"
     }
 }
 
 # ちょうどいいスタンプのサイズを計算するために元画像の横幅のpxを設定しておく
-# いらないかもこれ〜〜
 STAMP_PX = {
     "boushi": 1000,
     "effecthana": 100,
-    "effecthone": 1280,
+    "effecthone": 1024,
     "effectribon": 904,
     "effectsangurasu": 1052,
+    "effectsangurasu_migi": 529,
+    "effectsangurasu_hidari": 529,
     "mimi": 915,
     "effectatamaribon": 1112,
-    "effecteye": 978
+    "effecteye": 978,
+    "effecteye_katame": 305,
+    "kiraeffect":746,
+    "cat":900,
+    "eye1":950,
+    "eye1_migi": 269,
+    "eye1_hidari": 269,
+    "eye2":950,
+    "eye2_katame": 344,
+    "glassguruguru":1000,
+    "glassguruguru_migi": 495,
+    "glassguruguru_hidari": 495,
+    "hige":155,
+    "hoippu":1000,
+    "nekonose":266,
+    "nekutai":396,
+    "nezumi":900,
+    "santa":1000,
+    "star":1000,
+    "sunglasshosi":1000,
+    "sunglasshosi_migi": 498,
+    "sunglasshosi_hidari": 498,
+    "suzu":900,
+    "tuno":900,
+    "snoweffect":746
 }
-
-
 
 # ユーザーからサーバーへのデータ形式を定義
 class StampRequestData(BaseModel):
     upload_image_id: str
     stamp_id: str
 
-# あいちゃんのモデル
-# ランドマーク９点の座標テキストデータをリストにする
-def landmark_text_to_list(landmaek_text: str) -> List[List[float]]:
-    points = []
-    pattern = re.compile(r'(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)')# 整数・小数・負の値を含む数値2つがある行を座標データとする
-
-    # テキスト全体を走査
-    for line in landmaek_text.splitlines():
-        match = pattern.search(line.strip())
-        if match :
-            x = float(match.group(1))
-            y = float(match.group(2))
-            points.append([x, y])
-    return points
-
-# ランドマークから中心座標を計算する
-# テキストデータはpoint0~8に行ごとに分かれてる。それぞれのpointに入ってる2つのデータに名前をつける。
-def get_center_landmarks(points: List[List[float]]) -> Dict:
-    right_eye_right_x, right_eye_right_y = points[0] # 右目右端
-    right_eye_left_x, right_eye_left_y = points[1] # 右目左端
-    left_eye_right_x, left_eye_right_y = points[2] # 左目右端
-    left_eye_left_x, left_eye_left_y = points[3] # 左目左端
-    nose_x, nose_y = points[4] # 鼻
-    mouth_right_x, mouth_right_y = points[5] # 口右端
-    mouth_left_x, mouth_left_y = points[6] # 口左端
-    nose_to_mouth_x, nose_to_mouth_y = points[7] # 鼻と口の間の点
-    mouth_center_x, mouth_center_y = points[8] # 口中央
-
-    # 右目の中心座標を計算
-    right_eye_x = (right_eye_right_x + right_eye_left_x) / 2
-    right_eye_y = (right_eye_right_y + right_eye_left_y) / 2
-
-    # 左目の中心座標を計算
-    left_eye_x = (left_eye_right_x + left_eye_left_x) / 2
-    left_eye_y = (left_eye_right_y + left_eye_left_y) / 2
-
-    # 右目、左目、鼻、口をランドマーク辞書にする
-    parts_landmarks = {
-        "left_eye": { "x": int(left_eye_x), "y": int(left_eye_y)},
-        "right_eye": { "x": int(right_eye_x), "y": int(right_eye_y)},
-        "nose": { "x": int(nose_x), "y": int(nose_y)},
-        "mouth": { "x": int(mouth_center_x), "y": int(mouth_center_y)}
-    }
-    return parts_landmarks
-
-# あさひちゃんのモデル
 # バウンディングボックスとランドマーク９点がリストで返ってくるので、それを使う
 def get_center_landmarks(points: List[List[float]], bbox: List[float]) -> Dict:
     # 右目の中心座標を計算
@@ -217,149 +221,37 @@ def get_center_landmarks(points: List[List[float]], bbox: List[float]) -> Dict:
     }
     return parts_landmarks
 
-def detect_landmarks_text(image_path: str):
-    # あいちゃんのモデル
-    if USE_NAKAYAMA_MODEL:
-        # 閾値0.05にした
-        res = detect_face(image_path, threshold=0.05, allow_low_confidence=True)
-        if not res:
-            return None, None
-        face_data = res
-        # landmarks がないので bbox から近似ランドマークを作る
-        try:
-            bbox, score = face_data
-            x1, y1, x2, y2 = bbox
-            w = x2 - x1
-            h = y2 - y1
-            cx = x1 + w / 2
-            cy = y1 + h * 0.45  # 鼻付近を中心に寄せる
-
-            # 右目右端, 右目左端, 左目右端, 左目左端, 鼻, 口右, 口左, 鼻と口の間, 口中央
-            approx = [
-                [cx + w*0.20, cy - h*0.22],
-                [cx + w*0.05, cy - h*0.22],
-                [cx - w*0.05, cy - h*0.22],
-                [cx - w*0.20, cy - h*0.22],
-                [cx,             cy - h*0.05],
-                [cx + w*0.15, cy + h*0.25],
-                [cx - w*0.15, cy + h*0.25],
-                [cx,             cy + h*0.12],
-                [cx,             cy + h*0.25],
-            ]
-            return face_data, approx
-        except Exception:
-            return face_data, None
-    
-    # あさひちゃんとゆいちゃんのモデル
-    elif USE_MORI_MODEL or USE_MIZUNUMA_MODEL:
-        # 最初の２つはバウンディングボックスで残りはランドマーク[[xmin, ymin], [xmax, ymax], [lx1, ly1], ..., [lx9, ly9]]
-        result_data = detect_face_and_lndmk(image_path, score_threshold=0.05) # 閾値0.05にしちゃった
-        
-        if result_data is None:
-            print("⚠️ detect_face_and_lndmk が顔を検出できませんでした。")
-            return None, None
-        
-        result, score = result_data
-        
-        if len(result) < 11:
-            print("⚠️ ランドマーク数が不足しています。")
-            return None, None
-            
-        # バウンディングボックス情報を抽出
-        bbox_top_left = result[0]    # [xmin, ymin]
-        bbox_bottom_right = result[1]  # [xmax, ymax]
-        bbox = [bbox_top_left[0], bbox_top_left[1], bbox_bottom_right[0], bbox_bottom_right[1]]
-        
-        # ランドマーク9点を抽出
-        landmarks = result[2:11]  # インデックス2から10までの9点
-        
-        face_data = (bbox, score)
-        return face_data, landmarks, result     #resultを返さないとランドマーク表示ボタンが動かない、消しちゃダメ!
-    
-    else:
-        print("モデルが選択されていません")
-        return None, None
-
-
 # 画像からランドマークを検出する
 def get_landmarks_from_face(image_path: str) -> Dict | None:
+
+    result_data = detect_face_and_lndmk(image_path, score_threshold= 0.05)
+    if result_data is None:
+        print("❌ モデルが顔を検出できませんでした")
+        return None, None, None
     
-    # モデルごとの処理分岐
-    if USE_NAKAYAMA_MODEL:
-        # MLモデルで顔枠を検出（返り値: (bbox, score), raw_landmark_text/list ）
-        face_data, ML_LANDMARK_TEXT = detect_landmarks_text(image_path)
-        
-        # 顔検出ができなかった時
-        if face_data is None:
-            print("❌ MLモデルが顔を検出できませんでした。")
-            return None, None
-        
-        # ランドマーク文字列またはリストから座標リストを作る
-        face_landmarks_data = None
-        if isinstance(ML_LANDMARK_TEXT, str):
-            face_landmarks_data = landmark_text_to_list(ML_LANDMARK_TEXT)
-        elif isinstance(ML_LANDMARK_TEXT, list):
-            face_landmarks_data = ML_LANDMARK_TEXT
-        else:
-            print("❌ランドマーク情報が見つかりません。")
-            return None, None
+    result, score = result_data
 
-        if not face_landmarks_data:
-            print("❌ランドマークのパースに失敗しました。")
-            return None, None
-
-        if len(face_landmarks_data) != 9:
-            print(f"❌ランドマークは９点必要です。検出数: {len(face_landmarks_data)}")
-            return None, None
-
-        centers = get_center_landmarks(face_landmarks_data)
-        
-        # bboxとscoreを取得
-        try:
-            bbox, score = face_data
-            print(f"✅MLモデルが顔を検出し、ランドマークを計算しました。score={score: .2f}")
-        except Exception:
-            bbox, score = None, None
+    if len(result) < 11:
+        print("⚠️ ランドマーク数が不足しています")
+        return None, None, None
     
-    elif USE_MORI_MODEL or USE_MIZUNUMA_MODEL:
-        face_data, face_landmarks_data, result = detect_landmarks_text(image_path)     #resultを得ないとランドマーク表示ボタンが動かない、消しちゃダメ!
-        
-        # 顔検出ができなかった時
-        if face_data is None or face_landmarks_data is None:
-            print("❌ MLモデルが顔を検出できませんでした。")
-            return None, None
-        
-        # bboxとscoreを取得
-        bbox, score = face_data
-        print(f"✅MLモデルが顔を検出し、ランドマークを計算しました。score={score: .2f}")
+    # バウンディングボックス
+    bbox_top_left = result[0]
+    bbox_bottom_right = result[1]
+    bbox = [bbox_top_left[0], bbox_top_left[1], bbox_bottom_right[0], bbox_bottom_right[1]]
 
-        # bboxを渡してランドマーク辞書を作成
-        centers = get_center_landmarks(face_landmarks_data, bbox)
-    
-    else:
-        print("❌ モデルが選択されていません。")
-        return None, None
+    # ランドマーク
+    raw_landmarks = result[2:11]
 
+    print(f"✅ モデルが顔を検出し、ランドマークを計算しました。 スコア={score: .2f}")
+
+    centers = get_center_landmarks(raw_landmarks, bbox)
     meta = {
-        "raw_points": face_landmarks_data,
+        "raw_points": raw_landmarks,
         "bbox": bbox,
-        "score": score
+        "score": float(score)
     }
-    # 戻り値は(centers, meta)
-    return centers, meta, result     #resultを返さないとランドマーク表示ボタンが動かない、消しちゃダメ!
-
-    # 顔検出はできたけど、ランドマークのテキストデータがおかしい時
-    # 顔検出はできたけど、ランドマーク数が足りない時
-    #if len(face_landmarks_data) != 9:
-        #print(f"❌ランドマークは９点必要です。検出数: {len(face_landmarks_data)}")
-        #return None
-    
-    #parts_landmarks = get_center_landmarks(face_landmarks_data)
-
-    # 顔検出のスコアを計算
-    #_, score = face_data
-    #print(f"✅MLモデルが顔を検出し、ランドマークを計算しました。score={score: .2f}")
-    #return parts_landmarks
+    return centers, meta, result
 
 # APIエンドポイントの作成
 @app.get("/")
@@ -440,9 +332,9 @@ async def get_stamp_info(data: StampRequestData):
         head = centers["head"] # 追加しました。あさひちゃんのモデルで使えます。（高井良）
     except KeyError as e:
         raise HTTPException(status_code=400, detail=f"必要ランドマーク不足: {e}")
-        
-        # ★ ここを追加（bbox の情報を取り出しておく）★
-    bbox = meta.get("bbox")  # [x1, y1, x2, y2]
+
+    # ★ ここを追加（bbox の情報を取り出しておく）★
+    bbox = meta.get("bbox")
     if bbox is not None:
         x1, y1, x2, y2 = bbox
         face_w = x2 - x1
@@ -458,234 +350,596 @@ async def get_stamp_info(data: StampRequestData):
         face_h     = face_w * 1.2
         face_cx    = (le["x"] + re["x"]) / 2
         eye_line_y = (le["y"] + re["y"]) / 2
-        x1, y1 = int(face_cx - face_w / 2), int(eye_line_y - face_h * 0.4)
+        
+        # バウンディングボックスがないとき用（高井良）
+        x1 = int(face_cx - face_w / 2)
+        y1 = int(eye_line_y - face_h * 0.4)
+        x2 = int(x1 + face_w)
+        y2 = int(y1 + face_h)
+
+    # 横顔判定です。続きます。（高井良）
+    # 目と目の距離
+    eye_gap = math.sqrt((le["x"] - re["x"])**2 + (le["y"] - re["y"])**2)
+    
+    # 目と目の距離がbbox幅の 25% 未満なら横顔判定
+    yokogao = (eye_gap / face_w) < 0.25
+
+    # 角度計算
+    if yokogao: # 横顔のときは顔の角度を0とみなす
+        angle = 0.0
+    else: # 正面顔のときは顔の傾きを算出する
+        dy = le["y"] - re["y"] 
+        dx = le["x"] - re["x"]
+        angle = math.degrees(math.atan2(dy, dx))
+    # 横顔判定ここまで（高井良）
+
     # -----------------------------
     # 2) スタンプ画像読み込み
     # -----------------------------
 
-# 2) スタンプ画像ファイルを www/<stamp_id> から読む!
-    stamp_path = os.path.join(WWW_DIR, "effect/" + data.stamp_id + ".png")
+    # スタンプのタイプを取得（高井良）
+    stamp_type = STAMP_PLACEMENT_RULES[data.stamp_id]["type"]
+    filename = data.stamp_id
+
+    # メガネと目については横顔の時片目用の画像を使う
+    if yokogao and (data.stamp_id == "glassguruguru" or data.stamp_id == "effectsangurasu" or data.stamp_id == "eye1" or data.stamp_id == "sunglasshosi"):
+        if nose["x"] > face_cx: # 右向き
+            filename = f"{data.stamp_id}_migi"
+        else: # 左向き
+            filename = f"{data.stamp_id}_hidari"
+    
+    if yokogao and (data.stamp_id == "effecteye" or data.stamp_id == "eye2"):
+        filename = f"{data.stamp_id}_katame" # 右も左も同じ画像
+    
+    stamp_path = os.path.join(WWW_DIR, "effect/" + filename + ".png")
     if not os.path.exists(stamp_path):
         raise HTTPException(status_code=404, detail=f"スタンプ画像が見つかりません: {stamp_path}")
 
-    stamp_image_b64 = encode_image_to_base64(stamp_path)
-
     # 元画像の横幅
     with Image.open(stamp_path) as s_img:
-        stamp_w, stamp_h = s_img.size
+        original_w, original_h = s_img.size
 
-    # -----------------------------
-    # 3) 基本量の計算
-    # -----------------------------
-    eye_dist = abs(re["x"] - le["x"])           # 目と目の距離
-    eye_center_x = (le["x"] + re["x"]) / 2      # 目の中心X
-    eye_center_y = (le["y"] + re["y"]) / 2      # 目の中心Y
-    nose_mouth_dist = abs(mouth["y"] - nose["y"])
+        # 横顔の場合のスタンプ圧縮。続きます。（高井良）
+        # スタンプごとに圧縮率を設定。
+        compression_rules = {
+            "mimi": 0.7, # 耳70%
+            "kubi": 0.6, # リボン60%
+            "kuchi": 0.7 # 口70%
+        }
 
-    # 生のランドマーク（9 点）も取り出しておく
-    raw_points = meta.get("raw_points", None)
-    # -----------------------------
-    # 4) スタンプ種別ごとに位置とサイズを計算
-    # -----------------------------
-    stamp_type = STAMP_PLACEMENT_RULES[data.stamp_id]["type"]
-
-    # 初期値
-    needed_width_px = eye_dist * 1.8   # だいたいいい感じの大きさ
-    x_left = eye_center_x - needed_width_px/2
-    y_top  = eye_center_y - needed_width_px/2
-    
-    if stamp_type == "glasses":
-        eye_center_x = (le["x"] + re["x"]) / 2
-        eye_center_y = (le["y"] + re["y"]) / 2
-        needed_width_px = face_w * 0.90
-        aspect = stamp_h / stamp_w
-        glasses_h_scaled = needed_width_px * aspect
-        x_left = eye_center_x - needed_width_px / 2
-        y_top  = eye_center_y - glasses_h_scaled / 2
-
-    elif stamp_type == "eye":
-        eye_center_x = (le["x"] + re["x"]) / 2
-        eye_center_y = (le["y"] + re["y"]) / 2
-        needed_width_px = face_w * 0.80
-        aspect = stamp_h / stamp_w
-        glasses_h_scaled = needed_width_px * aspect
-        x_left = eye_center_x - needed_width_px / 2
-        y_top  = eye_center_y - glasses_h_scaled / 2
-        
-    elif stamp_type == "hat":
-        bx1, by1, bx2, by2 = bbox  # [xmin, ymin, xmax, ymax]
-        bbox_w = bx2 - bx1
-        bbox_h = by2 - by1
-        bbox_cx = (bx1 + bx2) / 2   # 横方向の中心
-        bbox_top_y = by1            # 上端の y（ここに帽子の底を合わせたい）
+        # もし「横顔」かつ「設定リストにあるスタンプ」なら変形する
+        if yokogao and stamp_type in compression_rules:
             
-        width_factor = 1.0          # 1.1 とかにすると少し大きくできる
-        needed_width_px = bbox_w * width_factor
-        aspect = stamp_h / stamp_w
-        hat_h_scaled = needed_width_px * aspect
-        OFFSET_X = 0
-        OFFSET_Y = 0
-        x_center = bbox_cx + OFFSET_X
-        y_bottom = bbox_top_y + OFFSET_Y
-        x_left = x_center - needed_width_px / 2 
-        y_top  = y_bottom - hat_h_scaled
-
-    elif stamp_type == "gantai":
-        # ● 眼帯（左目用）：顔の左寄りの目あたりに置く
-        needed_width_px = face_w * 0.60
-        aspect = stamp_h / stamp_w
-        patch_h_scaled = needed_width_px * aspect
-        left_eye_cx = re["x"]
-        left_eye_cy = re["y"]
-        x_left = left_eye_cx - needed_width_px / 2
-        y_top  = left_eye_cy - patch_h_scaled / 2
+            # スタンプごとに圧縮率を取得
+            rate = compression_rules[stamp_type]
+            
+            new_w = int(original_w * rate)
+            new_h = original_h
+            s_img = s_img.resize((new_w, new_h))
         
-    # ⑥ 鼻の飾り
-    elif stamp_type == "hana":
-        # 1. 0,1 点（bbox）から顔の横幅を計算 → face_w はすでに計算済み
-        # 2. bbox の横幅に合わせてスタンプ画像をスケーリング
-        needed_width_px = face_w * 0.28   # 鼻飾りなので少し小さめ（お好みで調整）
+        # Base64変換
+        buf = io.BytesIO()
+        s_img.save(buf, format="PNG")
+        stamp_image_b64 = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("utf-8")
+        
+        # サイズ情報を更新
+        stamp_w, stamp_h = s_img.size
+    # 横顔の場合のスタンプ圧縮ここまで（高井良）
 
-        # 3. スケーリング後の高さを計算
-        aspect = stamp_h / stamp_w
-        nose_h_scaled = needed_width_px * aspect
+    # 横顔のときの座標計算。続きます。左向き・右向き分岐以外は全部ゆめちゃんのコード使わせてもらいました。（高井良）
+    if yokogao:
+        # -----------------------------
+        # 3) 基本量の計算
+        # -----------------------------
+        eye_dist = abs(re["x"] - le["x"])           # 目と目の距離
+        eye_center_x = (le["x"] + re["x"]) / 2      # 目の中心X
+        eye_center_y = (le["y"] + re["y"]) / 2      # 目の中心Y
+        nose_mouth_dist = abs(mouth["y"] - nose["y"])
 
-        # 4. ランドマーク 6 点（centers["nose"]）の位置に
-        #    スタンプ画像の「中心」が来るように配置
-        center_x = nose["x"]
-        center_y = nose["y"]
+        # 生のランドマーク（9 点）も取り出しておく
+        raw_points = meta.get("raw_points", None)
 
-        x_left = center_x - needed_width_px / 2
-        y_top  = center_y - nose_h_scaled / 2
+        # 初期値
+        needed_width_px = eye_dist * 1.8   # だいたいいい感じの大きさ
+        x_left = eye_center_x - needed_width_px/2
+        y_top  = eye_center_y - needed_width_px/2
 
-    # ⑤ 口の飾り（ひげ・骨など）
-    elif stamp_type == "kuchi":
-        # raw_points があれば、9・10 点の中点を使う
-        if isinstance(raw_points, list) and len(raw_points) >= 9:
-            # ここでは「最後の 2 点」を 9,10 点とみなす
-            p9  = raw_points[-2]
-            p10 = raw_points[-1]
-            lm_cx = (p9[0] + p10[0]) / 2
-            lm_cy = (p9[1] + p10[1]) / 2
-            center_x = (p9[0] + p10[0]) / 2
-            center_y = (p9[1] + p10[1]) / 2
-        else:
-            # 万一 raw_points が無い場合は、従来どおり mouth 中心を使う
-            center_x = mouth["x"]
-            center_y = mouth["y"]
+        if stamp_type == "glasses":
+            if data.stamp_id == "glassguruguru" or data.stamp_id == "effectsangurasu" or data.stamp_id == "sunglasshosi":
+                if nose["x"] > face_cx: # 右向き
+                    target_eye = le
+                else:
+                    target_eye = re # 左向き
+                
+                eye_center_x = target_eye["x"]
+                eye_center_y = target_eye["y"]
+                needed_width_px = face_w * 0.6
+                aspect = stamp_h / stamp_w
+                glasses_h_scaled = needed_width_px * aspect
+                x_left = eye_center_x - needed_width_px / 2
+                y_top  = eye_center_y - glasses_h_scaled / 2
 
-        # 2. スタンプ画像をスケーリング（スケーリング方法はおまかせでよいとのことなので、
-        #    顔幅の 30% くらいに設定）
-        needed_width_px = face_w * 0.60
+            else:
+                eye_center_x = (le["x"] + re["x"]) / 2
+                eye_center_y = (le["y"] + re["y"]) / 2
+                needed_width_px = face_w * 0.90
+                aspect = stamp_h / stamp_w
+                glasses_h_scaled = needed_width_px * aspect
+                x_left = eye_center_x - needed_width_px / 2
+                y_top  = eye_center_y - glasses_h_scaled / 2
+        
+        elif stamp_type == "eye":
+            if data.stamp_id == "effecteye" or data.stamp_id == "eye1" or data.stamp_id == "eye2":
+                if nose["x"] > face_cx: # 右向き
+                    target_eye = le
+                else:
+                    target_eye = re # 左向き
+                
+                eye_center_x = (le["x"] + re["x"]) / 2
+                eye_center_y = (le["y"] + re["y"]) / 2
+                needed_width_px = face_w * 0.6
+                aspect = stamp_h / stamp_w
+                glasses_h_scaled = needed_width_px * aspect
+                x_left = eye_center_x - needed_width_px / 2
+                y_top  = eye_center_y - glasses_h_scaled / 2
 
-        # 3. スケーリング後の高さを計算
-        aspect = stamp_h / stamp_w
-        mouth_h_scaled = needed_width_px * aspect
+            else:
+                eye_center_x = (le["x"] + re["x"]) / 2
+                eye_center_y = (le["y"] + re["y"]) / 2
+                needed_width_px = face_w * 0.80
+                aspect = stamp_h / stamp_w
+                glasses_h_scaled = needed_width_px * aspect
+                x_left = eye_center_x - needed_width_px / 2
+                y_top  = eye_center_y - glasses_h_scaled / 2   
 
-        offset_x = 0.05 * face_w          # 左右のズレが残るなら 0.02 * face_w とか入れて調整
-        offset_y = 0.0
-        # 4. 9,10 点の中点に、スタンプ画像の中心が来るように配置
-        x_left = center_x - needed_width_px / 2 + offset_x
-        y_top  = center_y - mouth_h_scaled / 2 + offset_y
+        elif stamp_type == "hat":
+            bx1, by1, bx2, by2 = bbox  # [xmin, ymin, xmax, ymax]
+            bbox_w = bx2 - bx1
+            bbox_h = by2 - by1
+            bbox_cx = (bx1 + bx2) / 2   # 横方向の中心
+            bbox_top_y = by1            # 上端の y（ここに帽子の底を合わせたい）
+            
+            width_factor = 1.7         # 1.1 とかにすると少し大きくできる
+            needed_width_px = bbox_w * width_factor
+            aspect = stamp_h / stamp_w
+            hat_h_scaled = needed_width_px * aspect
 
-    elif stamp_type == "kubi":
-        # bbox 底辺の中点を求める
-        bx1, by1, bx2, by2 = bbox 
-        bbox_w = bx2 - bx1
-        center_bottom_x = (bx1 + bx2) / 2 
-        bottom_y = by2
+            if nose["x"] > face_cx: # 右向き
+                OFFSET_X = 0
+                x_left = bbox_cx - needed_width_px / 2
+            else: # 左向き
+                OFFSET_X = 0
+                x_left = bbox_cx - needed_width_px / 2
+            y_top = bbox_top_y - hat_h_scaled * 1.1
 
-        # 1. 0と1点から bbox の横幅はすでに bbox_w で計算済み
-        # 2. bboxの横幅に合わせてスタンプ画像をスケーリング
-        width_factor = 0.5    # 顔幅のどれくらいにするか（0.4〜0.6で微調整）
-        needed_width_px = bbox_w * width_factor
+        elif stamp_type == "mimi":
+            bx1, by1, bx2, by2 = bbox  # [xmin, ymin, xmax, ymax]
+            bbox_w = bx2 - bx1
+            bbox_h = by2 - by1
+            bbox_cx = (bx1 + bx2) / 2   # 横方向の中心
+            bbox_top_y = by1            # 上端の y（ここに帽子の底を合わせたい）
+            
+            width_factor = 1.7         # 1.1 とかにすると少し大きくできる
+            needed_width_px = bbox_w * width_factor
+            aspect = stamp_h / stamp_w
+            mimi_h_scaled = needed_width_px * aspect
 
-        # 3. スケーリングした画像の高さを取得
-        aspect = stamp_h / stamp_w
-        ribbon_h_scaled = needed_width_px * aspect
+            if nose["x"] > face_cx: # 右向き
+                OFFSET_X = 0
+                x_left = bbox_cx - needed_width_px / 2
+            else: # 左向き
+                OFFSET_X = 0
+                x_left = bbox_cx - needed_width_px / 2
+            y_top = bbox_top_y - mimi_h_scaled * 0.8
 
-        # 4. bbox の下側の中点と、スタンプ画像の「上側の中点」が一致するように配置
-        #    → 上側の中点 = (x_left + needed_width_px/2, y_top)
-        #       これを (center_bottom_x, bottom_y) に合わせる
-        x_left = center_bottom_x - needed_width_px / 2
-        y_top  = bottom_y
+        # ⑥ 鼻の飾り
+        elif stamp_type == "hana":
+            # 1. 0,1 点（bbox）から顔の横幅を計算 → face_w はすでに計算済み
+            # 2. bbox の横幅に合わせてスタンプ画像をスケーリング
+            needed_width_px = face_w * 0.4   # 鼻飾りなので少し小さめ（お好みで調整）
 
+            # 3. スケーリング後の高さを計算
+            aspect = stamp_h / stamp_w
+            nose_h_scaled = needed_width_px * aspect
+
+            # 4. ランドマーク 6 点（centers["nose"]）の位置に
+            #    スタンプ画像の「中心」が来るように配置
+            center_x = nose["x"]
+            center_y = nose["y"]
+
+            x_left = center_x - needed_width_px / 2
+            y_top  = center_y - nose_h_scaled / 2
+        
+        # ⑤ 口の飾り（ひげ・骨など）
+        elif stamp_type == "kuchi":
+            if isinstance(raw_points, list) and len(raw_points) >= 9:
+                mouth_left  = raw_points[5]
+                mouth_right = raw_points[6]
+                mouth_up    = raw_points[7]
+                mouth_down  = raw_points[8]
+            
+                center_x = (mouth_left[0] + mouth_right[0]) / 2.0
+                center_y = (mouth_up[1]   + mouth_down[1]) / 2.0
+            else:
+                # 万一 raw_points が無い場合は、従来どおり mouth 中心を使う
+                center_x = mouth["x"]
+                center_y = mouth["y"]
+
+            # 2. スタンプ画像をスケーリング（スケーリング方法はおまかせでよいとのことなので、
+            #    顔幅の 30% くらいに設定）
+            needed_width_px = face_w * 1.0
+
+            # 3. スケーリング後の高さを計算
+            aspect = stamp_h / stamp_w
+            mouth_h_scaled = needed_width_px * aspect
+            # 4. 9,10 点の中点に、スタンプ画像の中心が来るように配置
+            if nose["x"] > face_cx: # 右向き
+                offset_x = face_cx * 0.1        # 左右のズレが残るなら 0.02 * face_w とか入れて調整
+                x_left = center_x - needed_width_px / 2 + offset_x
+            else: # 左向き
+                offset_x = face_cx * 0.1         # 左右のズレが残るなら 0.02 * face_w とか入れて調整
+                x_left = center_x - needed_width_px / 2 - offset_x
+            offset_y = face_h * 0.1
+            y_top  = center_y - mouth_h_scaled / 2 + offset_y
+
+        elif stamp_type == "kubi":
+            # bbox 底辺の中点を求める
+            bx1, by1, bx2, by2 = bbox
+            bbox_w = bx2 - bx1
+            center_bottom_x = (bx1 + bx2) / 2 
+            bottom_y = by2
+
+            # 1. 0と1点から bbox の横幅はすでに bbox_w で計算済み
+            # 2. bboxの横幅に合わせてスタンプ画像をスケーリング
+            width_factor = 1.0    # 顔幅のどれくらいにするか（0.4〜0.6で微調整）
+            needed_width_px = bbox_w * width_factor
+
+            # 3. スケーリングした画像の高さを取得
+            aspect = stamp_h / stamp_w
+            ribbon_h_scaled = needed_width_px * aspect
+
+            if nose["x"] > face_cx: # 右向き
+                x_left = bx1
+            else: # 左向き
+                x_left = bx2
+            y_top  = bottom_y
+        
+        elif stamp_type == "effectribon":
+            # bbox 底辺の中点を求める
+            bx1, by1, bx2, by2 = bbox
+            bbox_w = bx2 - bx1
+            center_bottom_x = (bx1 + bx2) / 2 
+            bottom_y = by2
+
+            # 1. 0と1点から bbox の横幅はすでに bbox_w で計算済み
+            # 2. bboxの横幅に合わせてスタンプ画像をスケーリング
+            width_factor = 1.0    # 顔幅のどれくらいにするか（0.4〜0.6で微調整）
+            needed_width_px = bbox_w * width_factor
+
+            # 3. スケーリングした画像の高さを取得
+            aspect = stamp_h / stamp_w
+            ribbon_h_scaled = needed_width_px * aspect
+
+            if nose["x"] > face_cx: # 右向き
+                x_left = bx1
+            else: # 左向き
+                x_left = bx2
+            y_top  = bottom_y
+        
+        elif stamp_type == "kazari":
+            # ★ ランドマーク・bbox を使って「顔のだいぶ周りまで」覆うエフェクトにする
+
+            # 1. 顔の bbox 情報（他のスタンプでも使っているやつ）
+            bx1, by1, bx2, by2 = bbox  # [xmin, ymin, xmax, ymax]
+            face_w = bx2 - bx1
+            face_h = by2 - by1
+
+            # 2. 顔の中心座標
+            face_cx = (bx1 + bx2) / 2
+            face_cy = (by1 + by2) / 2
+
+            # 3. 「顔の長いほうの辺」の 2.5 倍ぐらいに広げて、周りも覆うようにする
+            face_long = max(face_w, face_h)
+            needed_width_px = face_long * 2.0
+
+            # 4. スタンプ画像の縦横比に合わせて高さを決める
+            aspect = stamp_h / stamp_w
+            kira_h_scaled = needed_width_px * aspect
+
+            # 5. 顔の中心にスタンプの中心が来るように、左上座標を決める
+            x_left = face_cx - needed_width_px / 2
+            y_top  = face_cy - kira_h_scaled / 2
+
+        elif stamp_type == "kira":
+            original_image_path = os.path.join(
+                TEMP_DIR, data.upload_image_id, "original.jpg"
+                )
+                
+            with Image.open(original_image_path) as base_img:
+                img_w, img_h = base_img.size  # ← 元画像の縦横
+                
+                needed_width_px = img_w
+                x_left = 0
+                y_top  = 0
+                
+                angle = 0.0
+                rotation_center_x = 0.5
+                rotation_center_y = 0.5    
+            
+        else: # その他のスタンプ
+            needed_width_px = face_w * 0.5
+            x_left = face_cx - needed_width_px / 2
+            y_top = (y1 + y2)/2 - needed_width_px / 2
+    # 横顔ここまで（高井良）
+    
+    # 正面顔のとき
     else:
-        # その他スタンプ（鼻あたり）
-        needed_width_px = eye_dist * 1.0
-        x_left = nose["x"] - needed_width_px/2
-        y_top  = nose["y"] - needed_width_px/2
+        # -----------------------------
+        # 3) 基本量の計算
+        # -----------------------------
+        eye_dist = abs(re["x"] - le["x"])           # 目と目の距離
+        eye_center_x = (le["x"] + re["x"]) / 2      # 目の中心X
+        eye_center_y = (le["y"] + re["y"]) / 2      # 目の中心Y
+        nose_mouth_dist = abs(mouth["y"] - nose["y"])
+
+        # 生のランドマーク（9 点）も取り出しておく
+        raw_points = meta.get("raw_points", None)
+
+        # 初期値
+        needed_width_px = eye_dist * 1.8   # だいたいいい感じの大きさ
+        x_left = eye_center_x - needed_width_px/2
+        y_top  = eye_center_y - needed_width_px/2
+        
+        if stamp_type == "glasses":
+            eye_center_x = (le["x"] + re["x"]) / 2
+            eye_center_y = (le["y"] + re["y"]) / 2
+            needed_width_px = face_w * 0.90
+            aspect = stamp_h / stamp_w
+            glasses_h_scaled = needed_width_px * aspect
+            x_left = eye_center_x - needed_width_px / 2
+            y_top  = eye_center_y - glasses_h_scaled / 2
+        
+        elif stamp_type == "eye":
+            eye_center_x = (le["x"] + re["x"]) / 2
+            eye_center_y = (le["y"] + re["y"]) / 2
+            needed_width_px = face_w * 0.80
+            aspect = stamp_h / stamp_w
+            glasses_h_scaled = needed_width_px * aspect
+            x_left = eye_center_x - needed_width_px / 2
+            y_top  = eye_center_y - glasses_h_scaled / 2
+
+        elif stamp_type == "hat":
+            bx1, by1, bx2, by2 = bbox  # [xmin, ymin, xmax, ymax]
+            bbox_w = bx2 - bx1
+            bbox_h = by2 - by1
+            bbox_cx = (bx1 + bx2) / 2   # 横方向の中心
+            bbox_top_y = by1            # 上端の y（ここに帽子の底を合わせたい）
+            
+            width_factor = 1.0          # 1.1 とかにすると少し大きくできる
+            needed_width_px = bbox_w * width_factor
+            aspect = stamp_h / stamp_w
+            hat_h_scaled = needed_width_px * aspect
+            OFFSET_X = 0
+            OFFSET_Y = 0
+            x_center = bbox_cx + OFFSET_X
+            y_bottom = bbox_top_y + OFFSET_Y
+            x_left = x_center - needed_width_px / 2 
+            y_top  = y_bottom - hat_h_scaled
+
+        # 追加しました（高井良）
+        elif stamp_type == "mimi":
+            bx1, by1, bx2, by2 = bbox  # [xmin, ymin, xmax, ymax]
+            bbox_w = bx2 - bx1
+            bbox_h = by2 - by1
+            bbox_cx = (bx1 + bx2) / 2   # 横方向の中心
+            bbox_top_y = by1            # 上端の y（ここに帽子の底を合わせたい）
+            
+            width_factor = 1.0          # 1.1 とかにすると少し大きくできる
+            needed_width_px = bbox_w * width_factor
+            aspect = stamp_h / stamp_w
+            mimi_h_scaled = needed_width_px * aspect
+            OFFSET_X = 0
+            OFFSET_Y = 0
+            x_center = bbox_cx + OFFSET_X
+            y_bottom = bbox_top_y + OFFSET_Y
+            x_left = x_center - needed_width_px / 2
+            y_top = y_bottom - (needed_width_px * aspect) # hatと違うのここだけです
+        # ここまで（高井良）
+
+        elif stamp_type == "gantai":
+            # ● 眼帯（左目用）：顔の左寄りの目あたりに置く
+            needed_width_px = face_w * 0.60
+            aspect = stamp_h / stamp_w
+            patch_h_scaled = needed_width_px * aspect
+            left_eye_cx = re["x"]
+            left_eye_cy = re["y"]
+            x_left = left_eye_cx - needed_width_px / 2
+            y_top  = left_eye_cy - patch_h_scaled / 2
+
+        # ⑥ 鼻の飾り
+        elif stamp_type == "hana":
+            # 1. 0,1 点（bbox）から顔の横幅を計算 → face_w はすでに計算済み
+            # 2. bbox の横幅に合わせてスタンプ画像をスケーリング
+            needed_width_px = face_w * 0.28   # 鼻飾りなので少し小さめ（お好みで調整）
+
+            # 3. スケーリング後の高さを計算
+            aspect = stamp_h / stamp_w
+            nose_h_scaled = needed_width_px * aspect
+
+            # 4. ランドマーク 6 点（centers["nose"]）の位置に
+            #    スタンプ画像の「中心」が来るように配置
+            center_x = nose["x"]
+            center_y = nose["y"]
+
+            x_left = center_x - needed_width_px / 2
+            y_top  = center_y - nose_h_scaled / 2
+
+        # ⑤ 口の飾り（ひげ・骨など）
+        elif stamp_type == "kuchi":
+            if isinstance(raw_points, list) and len(raw_points) >= 9:
+                mouth_left  = raw_points[5]
+                mouth_right = raw_points[6]
+                mouth_up    = raw_points[7]
+                mouth_down  = raw_points[8]
+            
+                center_x = (mouth_left[0] + mouth_right[0]) / 2.0
+                center_y = (mouth_up[1]   + mouth_down[1]) / 2.0
+            else:
+                # 万一 raw_points が無い場合は、従来どおり mouth 中心を使う
+                center_x = mouth["x"]
+                center_y = mouth["y"]
+
+            # 2. スタンプ画像をスケーリング（スケーリング方法はおまかせでよいとのことなので、
+            #    顔幅の 30% くらいに設定）
+            needed_width_px = face_w * 0.80
+
+            # 3. スケーリング後の高さを計算
+            aspect = stamp_h / stamp_w
+            mouth_h_scaled = needed_width_px * aspect
+
+            offset_x = 0.0         # 左右のズレが残るなら 0.02 * face_w とか入れて調整
+            offset_y = 0.0
+            # 4. 9,10 点の中点に、スタンプ画像の中心が来るように配置
+            x_left = center_x - needed_width_px / 2 + offset_x
+            y_top  = center_y - mouth_h_scaled / 2 + offset_y
+
+        elif stamp_type == "kubi":
+            # bbox 底辺の中点を求める
+            bx1, by1, bx2, by2 = bbox
+            bbox_w = bx2 - bx1
+            center_bottom_x = (bx1 + bx2) / 2 
+            bottom_y = by2
+
+            # 1. 0と1点から bbox の横幅はすでに bbox_w で計算済み
+            # 2. bboxの横幅に合わせてスタンプ画像をスケーリング
+            width_factor = 0.5    # 顔幅のどれくらいにするか（0.4〜0.6で微調整）
+            needed_width_px = bbox_w * width_factor
+
+            # 3. スケーリングした画像の高さを取得
+            aspect = stamp_h / stamp_w
+            ribbon_h_scaled = needed_width_px * aspect
+
+            # 4. bbox の下側の中点と、スタンプ画像の「上側の中点」が一致するように配置
+            #    → 上側の中点 = (x_left + needed_width_px/2, y_top)
+            #       これを (center_bottom_x, bottom_y) に合わせる
+            x_left = center_bottom_x - needed_width_px / 2
+            y_top  = bottom_y
+        
+        elif stamp_type == "effectribon":
+            # bbox 底辺の中点を求める
+            bx1, by1, bx2, by2 = bbox
+            bbox_w = bx2 - bx1
+            center_bottom_x = (bx1 + bx2) / 2 
+            bottom_y = by2
+
+            # 1. 0と1点から bbox の横幅はすでに bbox_w で計算済み
+            # 2. bboxの横幅に合わせてスタンプ画像をスケーリング
+            width_factor = 0.5    # 顔幅のどれくらいにするか（0.4〜0.6で微調整）
+            needed_width_px = bbox_w * width_factor
+
+            # 3. スケーリングした画像の高さを取得
+            aspect = stamp_h / stamp_w
+            ribbon_h_scaled = needed_width_px * aspect
+
+            # 4. bbox の下側の中点と、スタンプ画像の「上側の中点」が一致するように配置
+            #    → 上側の中点 = (x_left + needed_width_px/2, y_top)
+            #       これを (center_bottom_x, bottom_y) に合わせる
+            x_left = center_bottom_x - needed_width_px / 2
+            y_top  = bottom_y
+
+        elif stamp_type == "kira":
+            original_image_path = os.path.join(
+                TEMP_DIR, data.upload_image_id, "original.jpg"
+                )
+                
+            with Image.open(original_image_path) as base_img:
+                img_w, img_h = base_img.size  # ← 元画像の縦横
+                
+                needed_width_px = img_w
+                x_left = 0
+                y_top  = 0 
+                
+                angle = 0.0
+                rotation_center_x = 0.5
+                rotation_center_y = 0.5  
+
+        else:
+            # その他スタンプ（鼻あたり）
+            needed_width_px = eye_dist * 1.0
+            x_left = nose["x"] - needed_width_px/2
+            y_top  = nose["y"] - needed_width_px/2
 
     # -----------------------------
     # 5) scale 計算（左上座標に丸め）
     # -----------------------------
-    base_width_px = STAMP_PX.get(data.stamp_id, stamp_w)
+    base_width_px = STAMP_PX.get(filename, stamp_w)
     if base_width_px <= 0:
         base_width_px = stamp_w
+    
+    if stamp_type == "kira":
+        scale = max(img_w / stamp_w, img_h / stamp_h)
+    else:
+        scale = needed_width_px / base_width_px
+    # x_int = int(round(x_left))
+    # y_int = int(round(y_top))
+    
+    # 角度計算用に追加しました。続きます。（高井良）
+    # 実際の表示サイズ（回転の中心計算に必要）
+    final_display_w = stamp_w * scale
+    final_display_h = stamp_h * scale
+    
+    # 回転軸の設定（0.5で中心）
+    rotation_center_x = 0.5
+    rotation_center_y = 0.5
 
-    scale = needed_width_px / base_width_px
-    x_int = max(0, int(x_left))
-    y_int = max(0, int(y_top))
+    # スタンプごとの設定
+    if stamp_type == "hat":
+        rotation_center_y = 1.0 # 底辺中心
+
+    elif stamp_type == "mimi":
+        rotation_center_y = 1.0 # 底辺中心
+
+    elif stamp_type == "effectatamaribon":
+        rotation_center_y = 1.0 # 底辺中心
+
+    elif stamp_type == "kubi":
+        rotation_center_y = 0.0 # 上辺中心
+    
+    elif stamp_type == "effectribon":
+        rotation_center_y = 0.0 # 上辺中心
+
+    # 回転軸が割合で計算されていたのをピクセルに変換することで描画できるようにする
+    rotation_center_x_px = final_display_w * rotation_center_x
+    rotation_center_y_px = final_display_h * rotation_center_y
+
+    # 最終的な中心座標の計算
+    final_center_x = x_left + rotation_center_x_px
+    final_center_y = y_top + rotation_center_y_px
+
+    # きらきらのエフェクトは回転させない
+    if stamp_type == "kira":
+        original_image_path = os.path.join(
+            TEMP_DIR, data.upload_image_id, "original.jpg"
+        )
+        with Image.open(original_image_path) as base_img:
+            img_w, img_h = base_img.size
+            
+        final_center_x = img_w / 2
+        final_center_y = img_h / 2
+        angle = 0.0   # 回転させない
+    # 角度計算ここまで（高井良）
 
     # アクセスログ更新
     ID_ACCESS_LOG[data.upload_image_id] = time.time()
 
     return JSONResponse(content={
         "stamp_id": data.stamp_id,
-        "x": x_int,
-        "y": y_int,
+        "x": int(final_center_x), # x_intから変えました
+        "y": int(final_center_y), # y_intから変えました
         "scale": scale,
+        "angle": angle,
+        "rotation_center_x": rotation_center_x,
+        "rotation_center_y": rotation_center_y,
         "stamp_image": stamp_image_b64
     })
-    
-    # ======加えたよ===================================================
-# 10. フロントファイルをアップロードするエンドポイント
-#
-# フロント班はここに pet.html / JSファイル をPOSTするだけでいい。
-# そうするとサーバー側の www/ に保存される。
-#
-# curl例:
-# curl -X POST "http://localhost:8000/upload_static_files" \
-#   -F "files=@pet.html" \
-#   -F "files=@EffectSelect.js" \
-#   -F "files=@ImageDownload.js" \
-#   -F "files=@ImageImport.js"
-#
-# 成功後は:
-#   http://localhost:8000/static/pet.html
-# でブラウザ表示できるようになる。
-# =========================================================
-@app.post("/upload_static_files", tags=["0. Frontend Static Upload"])
-async def upload_static_files(files: List[UploadFile] = File(...)):
-    
-    saved_urls: List[str] = []
 
-    for uploaded in files:
-        # ファイル名だけ取り出す（"C:\\path\\to\\pet.html" みたいなのを防ぐ）
-        filename = os.path.basename(uploaded.filename)
-
-        if not filename:
-            raise HTTPException(status_code=400, detail="File has no name")
-
-        # 拡張子チェック：.html / .js 以外は拒否（安全のため）
-        _, ext = os.path.splitext(filename.lower())
-        if ext not in [".html", ".htm", ".js", ".css", ".png", ".jpg", ".jpeg", ".gif"]:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Extension not allowed: {ext}"
-            )
-
-        # 保存先は www/<filename>
-        dest_path = os.path.join(WWW_DIR, filename)
-
-        # アップロード内容を保存
-        with open(dest_path, "wb") as out_file:
-            shutil.copyfileobj(uploaded.file, out_file)
-
-        # 後で確認しやすいように、公開URLも返す
-        saved_urls.append(f"/static/{filename}")
-    return JSONResponse(content={
-        "status": "ok",
-        "uploaded_files": saved_urls,
-        "hint": "ブラウザで /static/pet.html を開いて動作確認してください。"
-    })
