@@ -501,7 +501,7 @@ async def get_stamp_info(data: StampRequestData):
         elif stamp_type == "hana":
             # 1. 0,1 点（bbox）から顔の横幅を計算 → face_w はすでに計算済み
             # 2. bbox の横幅に合わせてスタンプ画像をスケーリング
-            needed_width_px = face_w * 0.3   # 鼻飾りなので少し小さめ（お好みで調整）
+            needed_width_px = face_w * 0.28   # 鼻飾りなので少し小さめ（お好みで調整）
 
             # 3. スケーリング後の高さを計算
             aspect = stamp_h / stamp_w
@@ -551,6 +551,8 @@ async def get_stamp_info(data: StampRequestData):
             #    顔幅の 30% くらいに設定）
             needed_width_px = face_w * 0.80
 
+             if data.stamp_id == "mouseB":
+                needed_width_px = face_w * 0.50
             # 3. スケーリング後の高さを計算
             aspect = stamp_h / stamp_w
             mouth_h_scaled = needed_width_px * aspect
@@ -708,7 +710,7 @@ async def get_stamp_info(data: StampRequestData):
         elif stamp_type == "hana":
             # 1. 0,1 点（bbox）から顔の横幅を計算 → face_w はすでに計算済み
             # 2. bbox の横幅に合わせてスタンプ画像をスケーリング
-            needed_width_px = face_w * 0.30   # 鼻飾りなので少し小さめ（お好みで調整）
+            needed_width_px = face_w * 0.28   # 鼻飾りなので少し小さめ（お好みで調整）
 
             # 3. スケーリング後の高さを計算
             aspect = stamp_h / stamp_w
@@ -757,6 +759,9 @@ async def get_stamp_info(data: StampRequestData):
             # 2. スタンプ画像をスケーリング（スケーリング方法はおまかせでよいとのことなので、
             #    顔幅の 30% くらいに設定）
             needed_width_px = face_w * 0.80
+
+            if data.stamp_id == "mouseB":
+                needed_width_px = face_w * 0.50
 
             # 3. スケーリング後の高さを計算
             aspect = stamp_h / stamp_w
