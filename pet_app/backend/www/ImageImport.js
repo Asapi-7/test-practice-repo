@@ -1,5 +1,6 @@
 function ImageImport(files){
   if (files.length === 0) return;
+  showLoadingText();//ローディング用に勝手に追加した
 	const file = files[0];              //もらうデータは必ずファイル群になってるから、先頭だけ抜き出して画像のみにする
   const reader = new FileReader();
   if (file.type.match("image.*")) {
@@ -51,6 +52,7 @@ function ImageImport(files){
       Img.src = event.target.result;                              //画像読み込み開始　こいつは処理が長い
 
       Img.onload = () => {                                        //画像読み込み終わった後の処理
+        hideLoadingText();//ローディング用
         let scale = 0;
         if(Img.width <= Img.height){                              //画像が縦長か横長かによって、幅を合わせる方を変更
           scale = ImageSpace.height/Img.height;
