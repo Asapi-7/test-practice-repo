@@ -551,7 +551,7 @@ async def get_stamp_info(data: StampRequestData):
             #    顔幅の 30% くらいに設定）
             needed_width_px = face_w * 0.80
 
-             if data.stamp_id == "mouseB":
+            if data.stamp_id == "mouseB":
                 needed_width_px = face_w * 0.50
             # 3. スケーリング後の高さを計算
             aspect = stamp_h / stamp_w
