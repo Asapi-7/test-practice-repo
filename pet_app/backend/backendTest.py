@@ -24,28 +24,10 @@ from PIL import Image
 import base64
 #
 
-import re
 import json
 
-# モデルを切り替える
-USE_NAKAYAMA_MODEL = False
-USE_MORI_MODEL = True
-USE_MIZUNUMA_MODEL = False
-
-# モデル別のインポートと定義
-if USE_NAKAYAMA_MODEL:
-    from .ml_model import detect_face, load_ml_model
-
-elif USE_MORI_MODEL:
-    from .detect2 import load_ml_model, detect_face_and_lndmk
-
-elif USE_MIZUNUMA_MODEL:
-    from .mizunuma_model import load_ml_model, detect_face_and_lndmk
-
-def encode_image_to_base64(image_path: str) -> str:
-    with open(image_path, "rb") as image_file:
-        encoded_bytes = base64.b64encode(image_file.read())
-        return f"data:image/png;base64,{encoded_bytes.decode('utf-8')}"
+#detect2.pyから機械学習モデルを読み込む
+from .detect2 import load_ml_model, detect_face_and_lndmk
 
 # 勝手に足しました：みうら
 ID_ACCESS_LOG = {}
@@ -54,7 +36,6 @@ ID_ACCESS_LOG = {}
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # サーバー起動時にMLモデルをロードする
-
     load_ml_model()
 
     task = asyncio.create_task(cleanup_id())
@@ -210,59 +191,11 @@ STAMP_PX = {
     "tuno":900
 }
 
-
-
 # ユーザーからサーバーへのデータ形式を定義
 class StampRequestData(BaseModel):
     upload_image_id: str
     stamp_id: str
 
-# あいちゃんのモデル
-# ランドマーク９点の座標テキストデータをリストにする
-def landmark_text_to_list(landmaek_text: str) -> List[List[float]]:
-    points = []
-    pattern = re.compile(r'(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)')# 整数・小数・負の値を含む数値2つがある行を座標データとする
-
-    # テキスト全体を走査
-    for line in landmaek_text.splitlines():
-        match = pattern.search(line.strip())
-        if match :
-            x = float(match.group(1))
-            y = float(match.group(2))
-            points.append([x, y])
-    return points
-
-# ランドマークから中心座標を計算する
-# テキストデータはpoint0~8に行ごとに分かれてる。それぞれのpointに入ってる2つのデータに名前をつける。
-def get_center_landmarks(points: List[List[float]]) -> Dict:
-    right_eye_right_x, right_eye_right_y = points[0] # 右目右端
-    right_eye_left_x, right_eye_left_y = points[1] # 右目左端
-    left_eye_right_x, left_eye_right_y = points[2] # 左目右端
-    left_eye_left_x, left_eye_left_y = points[3] # 左目左端
-    nose_x, nose_y = points[4] # 鼻
-    mouth_right_x, mouth_right_y = points[5] # 口右端
-    mouth_left_x, mouth_left_y = points[6] # 口左端
-    nose_to_mouth_x, nose_to_mouth_y = points[7] # 口上端
-    mouth_center_x, mouth_center_y = points[8] # 口下端
-
-    # 右目の中心座標を計算
-    right_eye_x = (right_eye_right_x + right_eye_left_x) / 2
-    right_eye_y = (right_eye_right_y + right_eye_left_y) / 2
-
-    # 左目の中心座標を計算
-    left_eye_x = (left_eye_right_x + left_eye_left_x) / 2
-    left_eye_y = (left_eye_right_y + left_eye_left_y) / 2
-
-    # 右目、左目、鼻、口をランドマーク辞書にする
-    parts_landmarks = {
-        "left_eye": { "x": int(left_eye_x), "y": int(left_eye_y)},
-        "right_eye": { "x": int(right_eye_x), "y": int(right_eye_y)},
-        "nose": { "x": int(nose_x), "y": int(nose_y)},
-        "mouth": { "x": int(mouth_center_x), "y": int(mouth_center_y)}
-    }
-    return parts_landmarks
-
-# あさひちゃんのモデル
 # バウンディングボックスとランドマーク９点がリストで返ってくるので、それを使う
 def get_center_landmarks(points: List[List[float]], bbox: List[float]) -> Dict:
     # 右目の中心座標を計算
@@ -287,90 +220,37 @@ def get_center_landmarks(points: List[List[float]], bbox: List[float]) -> Dict:
     }
     return parts_landmarks
 
-def detect_landmarks_text(image_path: str):
-    # あいちゃんのモデル
-    if USE_NAKAYAMA_MODEL:
-        # 閾値0.05にした
-        res = detect_face(image_path, threshold=0.05, allow_low_confidence=True)
-        if not res:
-            return None, None
-        face_data = res
-        # landmarks がないので bbox から近似ランドマークを作る
-        try:
-            bbox, score = face_data
-            x1, y1, x2, y2 = bbox
-            w = x2 - x1
-            h = y2 - y1
-            cx = x1 + w / 2
-            cy = y1 + h * 0.45  # 鼻付近を中心に寄せる
-
-            # 右目右端, 右目左端, 左目右端, 左目左端, 鼻, 口右, 口左, 鼻と口の間, 口中央
-            approx = [
-                [cx + w*0.20, cy - h*0.22],
-                [cx + w*0.05, cy - h*0.22],
-                [cx - w*0.05, cy - h*0.22],
-                [cx - w*0.20, cy - h*0.22],
-                [cx,             cy - h*0.05],
-                [cx + w*0.15, cy + h*0.25],
-                [cx - w*0.15, cy + h*0.25],
-                [cx,             cy + h*0.12],
-                [cx,             cy + h*0.25],
-            ]
-            return face_data, approx
-        except Exception:
-            return face_data, None
-    
-    # あさひちゃんとゆいちゃんのモデル
-    elif USE_MORI_MODEL or USE_MIZUNUMA_MODEL:
-        # 最初の２つはバウンディングボックスで残りはランドマーク[[xmin, ymin], [xmax, ymax], [lx1, ly1], ..., [lx9, ly9]]
-        result_data = detect_face_and_lndmk(image_path, score_threshold=0.05) # 閾値0.05にしちゃった
-        
-        if result_data is None:
-            print("⚠️ detect_face_and_lndmk が顔を検出できませんでした。")
-            return None, None, None
-        
-        result, score = result_data
-        
-        if len(result) < 11:
-            print("⚠️ ランドマーク数が不足しています。")
-            return None, None
-            
-        # バウンディングボックス情報を抽出
-        bbox_top_left = result[0]    # [xmin, ymin]
-        bbox_bottom_right = result[1]  # [xmax, ymax]
-        bbox = [bbox_top_left[0], bbox_top_left[1], bbox_bottom_right[0], bbox_bottom_right[1]]
-        
-        # ランドマーク9点を抽出
-        landmarks = result[2:11]  # インデックス2から10までの9点
-        
-        face_data = (bbox, score)
-        return face_data, landmarks, result     #resultを返さないとランドマーク表示ボタンが動かない、消しちゃダメ!
-    
-    else:
-        print("モデルが選択されていません")
-        return None, None
-
-
 # 画像からランドマークを検出する
 def get_landmarks_from_face(image_path: str) -> Dict | None:
-    
-    # Moriモデル専用（USE_MORI_MODELのみTrueで動作）
-    face_data, face_landmarks_data, result = detect_landmarks_text(image_path)
-    # 顔検出ができなかった時
-    if face_data is None or face_landmarks_data is None:
-        print("❌ MLモデルが顔を検出できませんでした。")
-        return None, None, None
 
-    bbox, score = face_data
-    print(f"✅MLモデルが顔を検出し、ランドマークを計算しました。score={score: .2f}")
-    centers = get_center_landmarks(face_landmarks_data, bbox)
+    result_data = detect_face_and_lndmk(image_path, score_threshold= 0.05)
+    if result_data is None:
+        print("❌ モデルが顔を検出できませんでした")
+        return None, None, None
+    
+    result, score = result_data
+
+    if len(result) < 11:
+        print("⚠️ ランドマーク数が不足しています")
+        return None, None, None
+    
+    # バウンディングボックス
+    bbox_top_left = result[0]
+    bbox_bottom_right = result[1]
+    bbox = [bbox_top_left[0], bbox_top_left[1], bbox_bottom_right[0], bbox_bottom_right[1]]
+
+    # ランドマーク
+    raw_landmarks = result[2:11]
+
+    print(f"✅ モデルが顔を検出し、ランドマークを計算しました。 スコア={score: .2f}")
+
+    centers = get_center_landmarks(raw_landmarks, bbox)
     meta = {
-        "raw_points": face_landmarks_data,
+        "raw_points": raw_landmarks,
         "bbox": bbox,
-        "score": score
+        "score": float(score)
     }
-    # 戻り値は(centers, meta)
-    return centers, meta, result     #resultを返さないとランドマーク表示ボタンが動かない、消しちゃダメ!
+    return centers, meta, result
 
 # APIエンドポイントの作成
 @app.get("/")
@@ -545,7 +425,7 @@ async def get_stamp_info(data: StampRequestData):
         stamp_w, stamp_h = s_img.size
     # 横顔の場合のスタンプ圧縮ここまで（高井良）
 
-    # 横顔のときの座標計算。続きます。左向き・右向き分布以外は全部ゆめちゃんのコード使わせてもらいました。（高井良）
+    # 横顔のときの座標計算。続きます。左向き・右向き分岐以外は全部ゆめちゃんのコード使わせてもらいました。（高井良）
     if yokogao:
         # -----------------------------
         # 3) 基本量の計算
@@ -691,17 +571,14 @@ async def get_stamp_info(data: StampRequestData):
             # 3. スケーリング後の高さを計算
             aspect = stamp_h / stamp_w
             mouth_h_scaled = needed_width_px * aspect
-
-            offset_x = 0.0         # 左右のズレが残るなら 0.02 * face_w とか入れて調整
-            offset_y = 0.0
             # 4. 9,10 点の中点に、スタンプ画像の中心が来るように配置
             if nose["x"] > face_cx: # 右向き
-                offset_x = 0.0         # 左右のズレが残るなら 0.02 * face_w とか入れて調整
-                x_left = center_x - needed_width_px * 0.6 + offset_x
+                offset_x = face_cx * 0.1        # 左右のズレが残るなら 0.02 * face_w とか入れて調整
+                x_left = center_x - needed_width_px / 2 + offset_x
             else: # 左向き
-                offset_x = 0.0         # 左右のズレが残るなら 0.02 * face_w とか入れて調整
-                x_left = center_x - needed_width_px * 0.2 + offset_x
-            offset_y = 0.0
+                offset_x = face_cx * 0.1         # 左右のズレが残るなら 0.02 * face_w とか入れて調整
+                x_left = center_x - needed_width_px / 2 - offset_x
+            offset_y = face_h * 0.1
             y_top  = center_y - mouth_h_scaled / 2 + offset_y
 
         elif stamp_type == "kubi":
