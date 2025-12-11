@@ -167,7 +167,7 @@ STAMP_PX = {
     "effectatamaribon": 1112,
     "effecteye": 978,
     "effecteye_katame": 305,
-    "kiraeffect":1536,
+    "kiraeffect":746,
     "cat":900,
     "eye1":950,
     "eye1_migi": 269,
@@ -188,7 +188,8 @@ STAMP_PX = {
     "sunglasshosi_migi": 498,
     "sunglasshosi_hidari": 498,
     "suzu":900,
-    "tuno":900
+    "tuno":900,
+    "snoweffect":746
 }
 
 # ユーザーからサーバーへのデータ形式を定義
@@ -625,7 +626,7 @@ async def get_stamp_info(data: StampRequestData):
                 x_left = bx2
             y_top  = bottom_y
         
-        elif stamp_type == "kira":
+        elif stamp_type == "kazari":
             # ★ ランドマーク・bbox を使って「顔のだいぶ周りまで」覆うエフェクトにする
 
             # 1. 顔の bbox 情報（他のスタンプでも使っているやつ）
@@ -648,6 +649,22 @@ async def get_stamp_info(data: StampRequestData):
             # 5. 顔の中心にスタンプの中心が来るように、左上座標を決める
             x_left = face_cx - needed_width_px / 2
             y_top  = face_cy - kira_h_scaled / 2
+
+        elif stamp_type == "kira":
+            original_image_path = os.path.join(
+                TEMP_DIR, data.upload_image_id, "original.jpg"
+                )
+                
+            with Image.open(original_image_path) as base_img:
+                img_w, img_h = base_img.size  # ← 元画像の縦横
+                
+                needed_width_px = img_w
+                x_left = 0
+                y_top  = 0
+                
+                angle = 0.0
+                rotation_center_x = 0.5
+                rotation_center_y = 0.5    
             
         else: # その他のスタンプ
             needed_width_px = face_w * 0.5
@@ -831,28 +848,20 @@ async def get_stamp_info(data: StampRequestData):
             y_top  = bottom_y
 
         elif stamp_type == "kira":
-            # ★ ランドマーク・bbox を使って「顔のだいぶ周りまで」覆うエフェクトにする
-
-            # 1. 顔の bbox 情報（他のスタンプでも使っているやつ）
-            bx1, by1, bx2, by2 = bbox  # [xmin, ymin, xmax, ymax]
-            face_w = bx2 - bx1
-            face_h = by2 - by1
-
-            # 2. 顔の中心座標
-            face_cx = (bx1 + bx2) / 2
-            face_cy = (by1 + by2) / 2
-
-            # 3. 「顔の長いほうの辺」の 2.5 倍ぐらいに広げて、周りも覆うようにする
-            face_long = max(face_w, face_h)
-            needed_width_px = face_long * 2.0
-
-            # 4. スタンプ画像の縦横比に合わせて高さを決める
-            aspect = stamp_h / stamp_w
-            kira_h_scaled = needed_width_px * aspect
-
-            # 5. 顔の中心にスタンプの中心が来るように、左上座標を決める
-            x_left = face_cx - needed_width_px / 2
-            y_top  = face_cy - kira_h_scaled / 2
+            original_image_path = os.path.join(
+                TEMP_DIR, data.upload_image_id, "original.jpg"
+                )
+                
+            with Image.open(original_image_path) as base_img:
+                img_w, img_h = base_img.size  # ← 元画像の縦横
+                
+                needed_width_px = img_w
+                x_left = 0
+                y_top  = 0 
+                
+                angle = 0.0
+                rotation_center_x = 0.5
+                rotation_center_y = 0.5  
 
         else:
             # その他スタンプ（鼻あたり）
@@ -867,7 +876,10 @@ async def get_stamp_info(data: StampRequestData):
     if base_width_px <= 0:
         base_width_px = stamp_w
     
-    scale = needed_width_px / base_width_px
+    if stamp_type == "kira":
+        scale = max(img_w / stamp_w, img_h / stamp_h)
+    else:
+        scale = needed_width_px / base_width_px
     # x_int = int(round(x_left))
     # y_int = int(round(y_top))
     
@@ -906,7 +918,15 @@ async def get_stamp_info(data: StampRequestData):
 
     # きらきらのエフェクトは回転させない
     if stamp_type == "kira":
-        angle = 0.0
+        original_image_path = os.path.join(
+            TEMP_DIR, data.upload_image_id, "original.jpg"
+        )
+        with Image.open(original_image_path) as base_img:
+            img_w, img_h = base_img.size
+            
+        final_center_x = img_w / 2
+        final_center_y = img_h / 2
+        angle = 0.0   # 回転させない
     # 角度計算ここまで（高井良）
 
     # アクセスログ更新

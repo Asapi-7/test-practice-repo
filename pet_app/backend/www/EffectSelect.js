@@ -57,10 +57,10 @@ async function EffectSelect(effectName){
     const context = ImageSpace.getContext('2d');                //2D描画用のコンテキストを取得
     const effectImg = new Image();
     effectImg.src = result["stamp_image"];                     //エフェクト画像の読み込み開始
-    
-    // 変更したよ
-    effectImg.onload = () => {
-        const baseScale = UserImageScale ?? 1;
+    //変更したよ
+    effectImg.onload = () => {                                  // 読み込み完了後、バックエンドの指示通りに画像を描画
+    // 元画像 → キャンバスの拡大率（ImageImport.js で保存した値）
+    const baseScale = UserImageScale;
 
     //     //if (effectName === "kiraeffect") {
     //         //const drawW = ImageSpace.width;
