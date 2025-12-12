@@ -28,24 +28,11 @@ async function EffectSelect(effectName){
         return;
     }
 
-    OnEffect.push(effectName);                                          //新しく有効化されるエフェクトを保存
-    console.log(OnEffect);
-    sessionStorage.setItem("OnEffect",JSON.stringify(OnEffect))         //エフェクトの有効化状況を再度保存
     const userRequest = {                                               //送る内容を封筒に収める
         upload_image_id: userID,
         stamp_id: effectName
     }
     const result = await requestEffect(userRequest);    //手紙を送って、返信を格納できるまで少し待つ
-
-    if (!result) {
-        console.log("result が null です");
-        return;
-    }
-
-    if (!result) {
-        console.log("result が null です");
-        return;
-    }
 
     if(result.detail){
         console.log("エラーってるよ!backで!");
@@ -53,6 +40,10 @@ async function EffectSelect(effectName){
         return;
     }
 
+    OnEffect.push(effectName);                                          //新しく有効化されるエフェクトを保存
+    console.log(OnEffect);
+    sessionStorage.setItem("OnEffect",JSON.stringify(OnEffect))         //エフェクトの有効化状況を再度保存
+    
     const ImageSpace = document.getElementById('ImageSpace');   //描画領域となるcanvasを指定
     const context = ImageSpace.getContext('2d');                //2D描画用のコンテキストを取得
     const effectImg = new Image();

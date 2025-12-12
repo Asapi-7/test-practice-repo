@@ -7,7 +7,7 @@ import math # 角度計算用に追加しました（高井良）
 from typing import Dict, List, Tuple
 #
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.responses import JSONResponse, RedirectResponse
 
 # 勝手に足しました：みうら
@@ -83,114 +83,79 @@ app.mount("/static", StaticFiles(directory=WWW_DIR), name="static")
 
 # スタンプごとのタイプを設定
 STAMP_PLACEMENT_RULES = {
-    "boushi": {
-        "type": "hat"
-    },
-    "effectatamaribon": {
-        "type": "hat"
-    },
-    "effecthana": {
-        "type": "hana"
-    },
-    "effecthone": {
-        "type": "kuchi"
-    },
-    "effectsangurasu": {
-        "type": "glasses"
-    },
-    "mimi": {
-        "type": "mimi" # 横顔用に修正しました（高井良）
-    },
-    "effecteye": {
-        "type": "eye"
-    },
-    "effectribon": {
-        "type": "kubi"
-    },
-    "kiraeffect": {
-        "type": "kira"
-    },
-    "cat": {
-        "type": "hat"
-    },
-    "eye1": {
-        "type": "eye"
-    },
-    "eye2": {
-        "type": "eye"
-    },
-    "glassguruguru": {
-        "type": "glasses"
-    },
-    "hige": {
-        "type": "kuchi"
-    },
-    "hoippu": {
-        "type": "hat"
-    },
-    "nekonose": {
-        "type": "hana"
-    },
-    "nekutai": {
-        "type": "kubi"
-    },
-    "nezumi": {
-        "type": "mimi"
-    },
-    "santa": {
-        "type": "hat"
-    },
-    "sunglasshosi": {
-        "type": "glasses"
-    },
-    "star": {
-        "type": "mimi"
-    },
-    "suzu": {
-        "type": "kubi"
-    },
-    "tuno": {
-        "type": "mimi"
-    }
+    "effectsangurasu": {"type": "glasses"},
+    "effectsangurasu_migi": {"type": "glasses"},
+    "effectsangurasu_hidari": {"type": "glasses"},
+    "sangurasuA": {"type": "glasses"},
+    "sangurasuA_migi": {"type": "glasses"},
+    "sangurasuA_hidari": {"type": "glasses"},
+    "sangurasuB": {"type": "glasses"},
+    "sangurasuB_migi": {"type": "glasses"},
+    "sangurasuB_hidari": {"type": "glasses"},
+    "boushi":   { "type": "hat" },
+    "santa":    { "type": "hat" },
+    "fuwafuwa": { "type": "hat" },
+    "effectribon": { "type": "kubi" },
+    "nekutai":     { "type": "kubi" },
+    "suzu":        { "type": "kubi" },
+    "effecteye":        { "type": "eye" },
+    "effecteye_katame": { "type": "eye" },
+    "eye1":             { "type": "eye" },
+    "eye1_migi":        { "type": "eye" },
+    "eye1_hidari":      { "type": "eye" },
+    "eye2":             { "type": "eye" },
+    "eye2_katame":      { "type": "eye" },
+    "effecthana": { "type": "hana" },
+    "hige":       { "type": "hige" },
+    "hige2":      { "type": "hige" },
+    "effecthone": { "type": "kuchi" },
+    "mouseA":     { "type": "kuchi" },
+    "mouseB":     { "type": "kuchi" },
+    "mimi":     { "type": "mimi" },
+    "starmimi": { "type": "mimi" },
+    "cat":      { "type": "mimi" },
+    "effectA": { "type": "kira" },
+    "effectB": { "type": "kira" },
+    "effectC": { "type": "kira" }
 }
 
 # ちょうどいいスタンプのサイズを計算するために元画像の横幅のpxを設定しておく
 STAMP_PX = {
-    "boushi": 1000,
-    "effecthana": 100,
-    "effecthone": 1024,
-    "effectribon": 904,
     "effectsangurasu": 1052,
     "effectsangurasu_migi": 529,
     "effectsangurasu_hidari": 529,
-    "mimi": 915,
-    "effectatamaribon": 1112,
+    "sangurasuA":1000,
+    "sangurasuA_migi": 498,
+    "sangurasuA_hidari": 498,
+    "sangurasuB":1000,
+    "sangurasuB_migi": 495,
+    "sangurasuB_hidari": 495,
+    "boushi": 1000,
+    "santa":1000,
+    "fuwafuwa":1000,
+    "effectribon": 904,
+    "nekutai":396,
+    "suzu":900,
     "effecteye": 978,
     "effecteye_katame": 305,
-    "kiraeffect":746,
-    "cat":900,
     "eye1":950,
     "eye1_migi": 269,
     "eye1_hidari": 269,
     "eye2":950,
     "eye2_katame": 344,
-    "glassguruguru":1000,
-    "glassguruguru_migi": 495,
-    "glassguruguru_hidari": 495,
-    "hige":155,
-    "hoippu":1000,
-    "nekonose":266,
-    "nekutai":396,
-    "nezumi":900,
-    "santa":1000,
-    "star":1000,
-    "sunglasshosi":1000,
-    "sunglasshosi_migi": 498,
-    "sunglasshosi_hidari": 498,
-    "suzu":900,
-    "tuno":900,
-    "snoweffect":746
-}
+    "effecthana": 100,
+    "hige":266,
+    "hige2":155,
+    "effecthone": 1024,
+    "mouseA":1024,
+    "mouseB":500,
+    "mimi": 915,
+    "starmimi":1000,
+    "cat":900,
+    "effectA":746,
+    "effectB":694,
+    "effectC":737
+    }
 
 # ユーザーからサーバーへのデータ形式を定義
 class StampRequestData(BaseModel):
@@ -382,7 +347,7 @@ async def get_stamp_info(data: StampRequestData):
     filename = data.stamp_id
 
     # メガネと目については横顔の時片目用の画像を使う
-    if yokogao and (data.stamp_id == "glassguruguru" or data.stamp_id == "effectsangurasu" or data.stamp_id == "eye1" or data.stamp_id == "sunglasshosi"):
+    if yokogao and (data.stamp_id == "effectsangurasu" or data.stamp_id == "sangurasuA" or data.stamp_id == "sangurasuB" or data.stamp_id == "eye1"):
         if nose["x"] > face_cx: # 右向き
             filename = f"{data.stamp_id}_migi"
         else: # 左向き
@@ -445,7 +410,7 @@ async def get_stamp_info(data: StampRequestData):
         y_top  = eye_center_y - needed_width_px/2
 
         if stamp_type == "glasses":
-            if data.stamp_id == "glassguruguru" or data.stamp_id == "effectsangurasu" or data.stamp_id == "sunglasshosi":
+            if data.stamp_id == "effectsangurasu" or data.stamp_id == "sangurasuA" or data.stamp_id == "sungrasuB":
                 if nose["x"] > face_cx: # 右向き
                     target_eye = le
                 else:
@@ -536,7 +501,24 @@ async def get_stamp_info(data: StampRequestData):
         elif stamp_type == "hana":
             # 1. 0,1 点（bbox）から顔の横幅を計算 → face_w はすでに計算済み
             # 2. bbox の横幅に合わせてスタンプ画像をスケーリング
-            needed_width_px = face_w * 0.4   # 鼻飾りなので少し小さめ（お好みで調整）
+            needed_width_px = face_w * 0.28   # 鼻飾りなので少し小さめ（お好みで調整）
+
+            # 3. スケーリング後の高さを計算
+            aspect = stamp_h / stamp_w
+            nose_h_scaled = needed_width_px * aspect
+
+            # 4. ランドマーク 6 点（centers["nose"]）の位置に
+            #    スタンプ画像の「中心」が来るように配置
+            center_x = nose["x"]
+            center_y = nose["y"]
+
+            x_left = center_x - needed_width_px / 2
+            y_top  = center_y - nose_h_scaled / 2
+        
+        elif stamp_type == "hige":
+            # 1. 0,1 点（bbox）から顔の横幅を計算 → face_w はすでに計算済み
+            # 2. bbox の横幅に合わせてスタンプ画像をスケーリング
+            needed_width_px = face_w * 0.80  # 鼻飾りなので少し小さめ（お好みで調整）
 
             # 3. スケーリング後の高さを計算
             aspect = stamp_h / stamp_w
@@ -567,8 +549,10 @@ async def get_stamp_info(data: StampRequestData):
 
             # 2. スタンプ画像をスケーリング（スケーリング方法はおまかせでよいとのことなので、
             #    顔幅の 30% くらいに設定）
-            needed_width_px = face_w * 1.0
+            needed_width_px = face_w * 0.80
 
+            if data.stamp_id == "mouseB":
+                needed_width_px = face_w * 0.50
             # 3. スケーリング後の高さを計算
             aspect = stamp_h / stamp_w
             mouth_h_scaled = needed_width_px * aspect
@@ -604,7 +588,7 @@ async def get_stamp_info(data: StampRequestData):
                 x_left = bx2
             y_top  = bottom_y
         
-        elif stamp_type == "effectribon":
+        elif stamp_type == "kubi":
             # bbox 底辺の中点を求める
             bx1, by1, bx2, by2 = bbox
             bbox_w = bx2 - bx1
@@ -626,30 +610,6 @@ async def get_stamp_info(data: StampRequestData):
                 x_left = bx2
             y_top  = bottom_y
         
-        elif stamp_type == "kazari":
-            # ★ ランドマーク・bbox を使って「顔のだいぶ周りまで」覆うエフェクトにする
-
-            # 1. 顔の bbox 情報（他のスタンプでも使っているやつ）
-            bx1, by1, bx2, by2 = bbox  # [xmin, ymin, xmax, ymax]
-            face_w = bx2 - bx1
-            face_h = by2 - by1
-
-            # 2. 顔の中心座標
-            face_cx = (bx1 + bx2) / 2
-            face_cy = (by1 + by2) / 2
-
-            # 3. 「顔の長いほうの辺」の 2.5 倍ぐらいに広げて、周りも覆うようにする
-            face_long = max(face_w, face_h)
-            needed_width_px = face_long * 2.0
-
-            # 4. スタンプ画像の縦横比に合わせて高さを決める
-            aspect = stamp_h / stamp_w
-            kira_h_scaled = needed_width_px * aspect
-
-            # 5. 顔の中心にスタンプの中心が来るように、左上座標を決める
-            x_left = face_cx - needed_width_px / 2
-            y_top  = face_cy - kira_h_scaled / 2
-
         elif stamp_type == "kira":
             original_image_path = os.path.join(
                 TEMP_DIR, data.upload_image_id, "original.jpg"
@@ -746,21 +706,28 @@ async def get_stamp_info(data: StampRequestData):
             y_top = y_bottom - (needed_width_px * aspect) # hatと違うのここだけです
         # ここまで（高井良）
 
-        elif stamp_type == "gantai":
-            # ● 眼帯（左目用）：顔の左寄りの目あたりに置く
-            needed_width_px = face_w * 0.60
-            aspect = stamp_h / stamp_w
-            patch_h_scaled = needed_width_px * aspect
-            left_eye_cx = re["x"]
-            left_eye_cy = re["y"]
-            x_left = left_eye_cx - needed_width_px / 2
-            y_top  = left_eye_cy - patch_h_scaled / 2
-
         # ⑥ 鼻の飾り
         elif stamp_type == "hana":
             # 1. 0,1 点（bbox）から顔の横幅を計算 → face_w はすでに計算済み
             # 2. bbox の横幅に合わせてスタンプ画像をスケーリング
             needed_width_px = face_w * 0.28   # 鼻飾りなので少し小さめ（お好みで調整）
+
+            # 3. スケーリング後の高さを計算
+            aspect = stamp_h / stamp_w
+            nose_h_scaled = needed_width_px * aspect
+
+            # 4. ランドマーク 6 点（centers["nose"]）の位置に
+            #    スタンプ画像の「中心」が来るように配置
+            center_x = nose["x"]
+            center_y = nose["y"]
+
+            x_left = center_x - needed_width_px / 2
+            y_top  = center_y - nose_h_scaled / 2
+        
+        elif stamp_type == "hige":
+            # 1. 0,1 点（bbox）から顔の横幅を計算 → face_w はすでに計算済み
+            # 2. bbox の横幅に合わせてスタンプ画像をスケーリング
+            needed_width_px = face_w * 0.80   # 鼻飾りなので少し小さめ（お好みで調整）
 
             # 3. スケーリング後の高さを計算
             aspect = stamp_h / stamp_w
@@ -792,6 +759,9 @@ async def get_stamp_info(data: StampRequestData):
             # 2. スタンプ画像をスケーリング（スケーリング方法はおまかせでよいとのことなので、
             #    顔幅の 30% くらいに設定）
             needed_width_px = face_w * 0.80
+
+            if data.stamp_id == "mouseB":
+                needed_width_px = face_w * 0.50
 
             # 3. スケーリング後の高さを計算
             aspect = stamp_h / stamp_w
@@ -825,28 +795,7 @@ async def get_stamp_info(data: StampRequestData):
             x_left = center_bottom_x - needed_width_px / 2
             y_top  = bottom_y
         
-        elif stamp_type == "effectribon":
-            # bbox 底辺の中点を求める
-            bx1, by1, bx2, by2 = bbox
-            bbox_w = bx2 - bx1
-            center_bottom_x = (bx1 + bx2) / 2 
-            bottom_y = by2
-
-            # 1. 0と1点から bbox の横幅はすでに bbox_w で計算済み
-            # 2. bboxの横幅に合わせてスタンプ画像をスケーリング
-            width_factor = 0.5    # 顔幅のどれくらいにするか（0.4〜0.6で微調整）
-            needed_width_px = bbox_w * width_factor
-
-            # 3. スケーリングした画像の高さを取得
-            aspect = stamp_h / stamp_w
-            ribbon_h_scaled = needed_width_px * aspect
-
-            # 4. bbox の下側の中点と、スタンプ画像の「上側の中点」が一致するように配置
-            #    → 上側の中点 = (x_left + needed_width_px/2, y_top)
-            #       これを (center_bottom_x, bottom_y) に合わせる
-            x_left = center_bottom_x - needed_width_px / 2
-            y_top  = bottom_y
-
+        
         elif stamp_type == "kira":
             original_image_path = os.path.join(
                 TEMP_DIR, data.upload_image_id, "original.jpg"
@@ -899,13 +848,7 @@ async def get_stamp_info(data: StampRequestData):
     elif stamp_type == "mimi":
         rotation_center_y = 1.0 # 底辺中心
 
-    elif stamp_type == "effectatamaribon":
-        rotation_center_y = 1.0 # 底辺中心
-
     elif stamp_type == "kubi":
-        rotation_center_y = 0.0 # 上辺中心
-    
-    elif stamp_type == "effectribon":
         rotation_center_y = 0.0 # 上辺中心
 
     # 回転軸が割合で計算されていたのをピクセルに変換することで描画できるようにする
@@ -943,3 +886,15 @@ async def get_stamp_info(data: StampRequestData):
         "stamp_image": stamp_image_b64
     })
 
+
+# 接続状況確認用POST(三浦が追加)
+@app.post("/check_ID", tags=["α. check_ID"])
+async def check_ID(data: dict = Body(...)):
+    userID = data.get("upload_image_id")
+    user_ID_pass = os.path.join(TEMP_DIR, userID)
+    if not os.path.exists(user_ID_pass):
+        raise HTTPException(status_code=404, detail="長時間操作が無かったため、接続が切れました。再度画像を選択してください。")
+    else:
+        result = True
+
+    return {"result": result}
