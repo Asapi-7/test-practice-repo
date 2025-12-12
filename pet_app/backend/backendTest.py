@@ -7,7 +7,7 @@ import math # 角度計算用に追加しました（高井良）
 from typing import Dict, List, Tuple
 #
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.responses import JSONResponse, RedirectResponse
 
 # 勝手に足しました：みうら
@@ -1066,3 +1066,15 @@ async def get_stamp_info(data: StampRequestData):
         "stamp_image": stamp_image_b64
     })
 
+
+# 接続状況確認用POST(三浦が追加)
+@app.post("/check_ID", tags=["α. check_ID"])
+async def check_ID(data: dict = Body(...)):
+    userID = data.get("upload_image_id")
+    user_ID_pass = os.path.join(TEMP_DIR, userID)
+    if not os.path.exists(user_ID_pass):
+        raise HTTPException(status_code=404, detail="長時間操作が無かったため、接続が切れました。再度画像を選択してください。")
+    else:
+        result = True
+
+    return {"result": result}
