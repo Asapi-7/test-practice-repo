@@ -1,7 +1,13 @@
 function showLoadingText() {
-  document.getElementById("loadingText").style.display = "block";
+  const loading = document.getElementById("loadingText");
+  if(loading){
+    loading.style.display = "block";
+  }
 }
 
 function hideLoadingText() {
-  document.getElementById("loadingText").style.display = "none";
+ const loading = document.getElementById("loadingText");
+  if(loading){
+    loading.style.display = "none";
+  }
 }

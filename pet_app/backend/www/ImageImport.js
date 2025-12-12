@@ -1,4 +1,12 @@
+function resetEffects(){
+  for(let key in pressCount){
+    pressCount[key] = 0;
+  }
+}
+
+
 function ImageImport(files){
+  resetEffects();
   if (files.length === 0) return;
   showLoadingText();//ローディング用に勝手に追加した
 	const file = files[0];              //もらうデータは必ずファイル群になってるから、先頭だけ抜き出して画像のみにする

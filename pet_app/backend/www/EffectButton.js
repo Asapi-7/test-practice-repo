@@ -1,20 +1,19 @@
 let activesubBox = null;
-let lock = false;
 
 function opensub(name){
     const newsubBox = document.getElementById("sub_" + name);
-    if (lock && activesubBox !== newsubBox) return;
+    if (activesubBox && activesubBox !== newsubBox) {
+        activesubBox.style.display = "none";
+    }
+
     if (activesubBox === newsubBox){
         newsubBox.style.display = "none";
         activesubBox = null;
-        lock = false;
         return;
     }
 
-    hideallsubs();
     newsubBox.style.display = "flex";
     activesubBox = newsubBox;
-    lock = true;
 }
 
 function hideallsubs() {
@@ -29,5 +28,4 @@ function applyeffect(effectName){
     handleClick(effectName);
     hideallsubs();
     activesubBox = null;
-    lock = false;
 }
