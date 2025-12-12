@@ -29,33 +29,17 @@
         margin-top: 20px;
     }
 
-    .loadingcircle {
-        position: absolute;
-        top:50%;
-        left: 50%;
-        transform: translate(-50%,-50%);
-        width:180px;
-        height:180px;
-        pointer-events: none;
-        animation:rotateCircle 3s linear infinite;
-        z-index: 10;
-    }
-
-    .loadingcircle span {
-        position:absolute;
-        left:50%;
-        top:50%;
-        transform-origin:0 70px ;
-        font-size: 24px;
-        font-weight: bold;
-        color: ivory;
-    }
-
-    @keyframes rotateCircle{
-        0%{transform: translate(-50%,-50%) rotate(0deg);}
-        100%{transform: translate(-50%,-50%) rotate(360deg);}
-    }
-
+   .loadingText{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    font-size: 28px;
+    font-weight: bold;
+    color: ivory;
+    pointer-events: none;
+    z-index: 10;
+   }
 
     .EffectButton{
         display: grid;
@@ -176,15 +160,8 @@
         ここにペットの写真が表示されます
         </canvas>
 
-        <div id="loadingText" class="loadingcircle" style="display:none;">
-            <span style="transform: rotate(0deg) translate(0,70px)">ロ</span>
-            <span style="transform: rotate(45deg) translate(0,70px)">ー</span>
-            <span style="transform: rotate(90deg) translate(0,70px)">デ</span>
-            <span style="transform: rotate(135deg) translate(0,70px)">ィ</span>
-            <span style="transform: rotate(180deg) translate(0,70px)">ン</span>
-            <span style="transform: rotate(225deg) translate(0,70px)">グ</span>
-            <span style="transform: rotate(270deg) translate(0,70px)">中</span>
-            <span style="transform: rotate(315deg) translate(0,70px)">…</span>
+        <div id="loadingText" class="loadingText" style="display:none;">
+            loading...
         </div>
 
         <div class="downloadbutton">
@@ -207,13 +184,13 @@
     
             <div id="sub_sangurasu" class="subButtons">
                 <button class="subButton" onclick="applyeffect('effectsangurasu')">
-                    <img src="pinkbox.png">
+                    <img src="button/glassC.png">
                 </button>
                 <button class="subButton" onclick="applyeffect('sangurasuA')">
-                    <img src="pinkbox.png">
+                    <img src="button/glassA.png">
                 </button>
                 <button class="subButton" onclick="applyeffect('sangurasuB')">
-                    <img src="pinkbox.png">
+                    <img src="button/glassB.png">
                 </button>
             </div>
         </div>
@@ -225,13 +202,13 @@
     
             <div id="sub_bousi" class="subButtons">
                 <button class="subButton" onclick="applyeffect('boushi')">
-                    <img src="pinkbox.png">
+                    <img src="button/hatC.png">
                 </button>
                 <button class="subButton" onclick="applyeffect('santa')">
-                    <img src="pinkbox.png">
+                    <img src="button/hatB.png">
                 </button>
                 <button class="subButton" onclick="applyeffect('fuwafuwa')">
-                    <img src="pinkbox.png">
+                    <img src="button/hatA.png">
                 </button>
             </div>
         </div>
@@ -243,13 +220,13 @@
     
             <div id="sub_ribon" class="subButtons">
                 <button class="subButton" onclick="applyeffect('effectribon')">
-                    <img src="pinkbox.png">
+                    <img src="button/neckC.png">
                 </button>
                 <button class="subButton" onclick="applyeffect('nekutai')">
-                    <img src="pinkbox.png">
+                    <img src="button/neckB.png">
                 </button>
                 <button class="subButton" onclick="applyeffect('suzu')">
-                    <img src="pinkbox.png">
+                    <img src="button/neckA.png">
                 </button>
             </div>
         </div>
@@ -261,13 +238,13 @@
     
             <div id="sub_eyes" class="subButtons">
                 <button class="subButton" onclick="applyeffect('effecteye')">
-                    <img src="pinkbox.png">
+                    <img src="button/eyeC.png">
                 </button>
                 <button class="subButton" onclick="applyeffect('eye1')">
-                    <img src="pinkbox.png">
+                    <img src="button/eyeB.png">
                 </button>
                 <button class="subButton" onclick="applyeffect('eye2')">
-                    <img src="pinkbox.png">
+                    <img src="button/eyeA.png">
                 </button>
             </div>
         </div>
@@ -279,13 +256,13 @@
     
             <div id="sub_nose" class="subButtons">
                 <button class="subButton" onclick="applyeffect('effecthana')">
-                    <img src="pinkbox.png">
+                    <img src="button/nosebtnA.png">
                 </button>
                 <button class="subButton" onclick="applyeffect('hige')">
-                    <img src="pinkbox.png">
+                    <img src="button/nosebtnB.png">
                 </button>
                 <button class="subButton" onclick="applyeffect('hige2')">
-                    <img src="pinkbox.png">
+                    <img src="button/nosebtnC.png">
                 </button>
             </div>
         </div>
@@ -297,13 +274,13 @@
     
             <div id="sub_mouse" class="subButtons">
                 <button class="subButton" onclick="applyeffect('effecthone')">
-                    <img src="pinkbox.png">
+                    <img src="button/mousebtnA.png">
                 </button>
                 <button class="subButton" onclick="applyeffect('mouseA')">
-                    <img src="pinkbox.png">
+                    <img src="button/mousebtnB.png">
                 </button>
                 <button class="subButton" onclick="applyeffect('mouseB')">
-                    <img src="pinkbox.png">
+                    <img src="button/mousebtnC.png">
                 </button>
             </div>
         </div>
@@ -315,13 +292,13 @@
     
             <div id="sub_mimi" class="subButtons">
                 <button class="subButton" onclick="applyeffect('mimi')">
-                    <img src="pinkbox.png">
+                    <img src="button/earB.png">
                 </button>
                 <button class="subButton" onclick="applyeffect('starmimi')">
-                <img src="pinkbox.png">
+                <img src="button/earC.png">
                 </button>
                 <button class="subButton" onclick="applyeffect('cat')">
-                    <img src="pinkbox.png">
+                    <img src="button/earA.png">
                 </button>
             </div>
         </div>
@@ -333,13 +310,13 @@
     
             <div id="sub_kirakira" class="subButtons">
                 <button class="subButton" onclick="applyeffect('effectA')">
-                    <img src="pinkbox.png">
+                    <img src="button/efA.png">
                 </button>
                 <button class="subButton" onclick="applyeffect('effectB')">
-                    <img src="pinkbox.png">
+                    <img src="button/efC.png">
                 </button>
                 <button class="subButton" onclick="applyeffect('effectC')">
-                    <img src="pinkbox.png">
+                    <img src="button/efB.png">
                 </button>
             </div>
         </div>
