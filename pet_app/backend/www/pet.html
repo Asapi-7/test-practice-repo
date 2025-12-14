@@ -41,6 +41,10 @@
     z-index: 10;
    }
 
+   .canvasWrapper{
+    position:relative;
+   }
+
     .EffectButton{
         display: grid;
         grid-template-columns: repeat(2,100px);
@@ -124,6 +128,25 @@
         display: block;
     }
     
+    #mark{
+        width: 150px;
+        height: 60px;
+        border: none;
+        background-color: lightblue;
+        color: cornflowerblue;
+        margin: 10px 0 0 10px;
+        cursor:pointer;
+        transition:background-color 0.3s ease;
+    }
+
+    #mark:hover{
+        background-color:paleturquoise;
+    }
+    
+    #mark:active{
+        transform:scale(0.85);
+        background-color:blue;
+    }
 
     .download{
         display:inline-block;
@@ -154,19 +177,20 @@
 <p><input type="file" accept="image/*" onchange="ImageImport(this.files)"></p>
 
 <div class="canvas-and-button">
+    <div class = "canvasWrapper">
+        <div class="canvasanddownload">
+            <canvas id="ImageSpace" width="650" height="650">
+            ここにペットの写真が表示されます
+            </canvas>
 
-    <div class="canvasanddownload">
-        <canvas id="ImageSpace" width="650" height="650">
-        ここにペットの写真が表示されます
-        </canvas>
-
-        <div id="loadingText" class="loadingText" style="display:none;">
+            <div id="loadingText" class="loadingText" style="display:none;">
             loading...
-        </div>
+            </div>
 
-        <div class="downloadbutton">
-            <button class="download" type="button" onclick="ImageDownload()">保存</button>
-            <button type="button" onclick = "ChangeUseImage()"></button>
+            <div class="downloadbutton">
+                <button class="download" type="button" onclick="ImageDownload()">保存</button>
+                <button id="mark" type="button" onclick = "ChangeUseImage()">ランドマーク</button>
+            </div>
         </div>
     </div>
  <script src="panda.js"></script>
@@ -215,7 +239,7 @@
 
         <div class="mid">
             <button class="effect-button" onclick="opensub('ribon')">
-                <img src="button/ribbon.png">
+                <img src="button/rbnbtn.png">
             </button>
     
             <div id="sub_ribon" class="subButtons">
@@ -269,7 +293,7 @@
 
         <div class="mid">
             <button class="effect-button" onclick="opensub('mouse')">
-                <img src="button/mousebotan.png">
+                <img src="button/moubtn.png">
             </button>
     
             <div id="sub_mouse" class="subButtons">

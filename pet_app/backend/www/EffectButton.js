@@ -26,5 +26,5 @@ function opensub(name){
 function applyeffect(effectName){
     console.log("エフェクト：",effectName);
     handleClick(effectName);
-    activesubBox = null;
+    //activesubBox = null;
 }

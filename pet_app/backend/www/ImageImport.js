@@ -3,12 +3,20 @@ function resetEffects(){
     pressCount[key] = 0;
   }
 }
-
-
-function ImageImport(files){
+//バグ回避
+let isBusy = false;
+async function ImageImport(files){
+  if (isBusy) return;
+  isBusy = true;
+  console.log("画像インポート中制限開始"); //バグ回避
   resetEffects();
-  if (files.length === 0) return;
-  showLoadingText();//ローディング用に勝手に追加した
+  showLoadingText();//ローディング用
+  if (files.length === 0) {
+  isBusy = false;
+  console.log("画像インポート中制限終了");
+  hideLoadingText();
+  return;
+  }
 	const file = files[0];              //もらうデータは必ずファイル群になってるから、先頭だけ抜き出して画像のみにする
   const reader = new FileReader();
   if (file.type.match("image.*")) {
@@ -35,6 +43,10 @@ function ImageImport(files){
       if(result.detail){
           console.log("エラーってるよ!backで!");
           alert(result.detail);
+          //バグ回避
+          isBusy = false;
+          console.log("画像インポート中制限終了");
+          hideLoadingText();
           return;
       }
 
@@ -57,10 +69,19 @@ function ImageImport(files){
       ImageSpace.setAttribute('height', '650');
       context.clearRect(0,0,ImageSpace.clientWidth,ImageSpace.clientHeight);
       const Img = new Image();                                    //ここに画像が入る
+      //バグ回避
+      Img.onerror = () => {
+        alert("画像の描画に失敗しました");
+        isBusy = false;
+        console.log("画像インポート中制限終了");
+        hideLoadingText();
+      };
       Img.src = event.target.result;                              //画像読み込み開始　こいつは処理が長い
 
       Img.onload = () => {                                        //画像読み込み終わった後の処理
         hideLoadingText();//ローディング用
+        isBusy = false;
+        console.log("画像インポート中制限終了");
         let scale = 0;
         if(Img.width <= Img.height){                              //画像が縦長か横長かによって、幅を合わせる方を変更
           scale = ImageSpace.height/Img.height;
@@ -76,8 +97,21 @@ function ImageImport(files){
         sessionStorage.setItem("Img", JSON.stringify(event.target.result));         //画像を他の関数でも使えるよう保存しておく    
       }
     }
+    //バグ回避
+    reader.onerror = () => {
+    alert("画像の読み込みに失敗しました");
+    isBusy = false;
+    console.log("画像インポート中制限終了");
+    hideLoadingText();
+};
     reader.readAsDataURL(file);                                     //画像をURLに変換　これに成功するとreader.onloadが動き出す
-	}
+	}else{
+    alert("画像ファイルを選んでください");
+    isBusy = false;
+    console.log("画像インポート中制限終了");
+    hideLoadingText();
+    return;
+  }
 }
 
 //strage: ID, OnEffect, UserImageScale, Img, AnotherImg
