@@ -458,44 +458,46 @@ async def get_stamp_info(data: StampRequestData):
                 y_top  = eye_center_y - glasses_h_scaled / 2   
 
         elif stamp_type == "hat":
-            bx1, by1, bx2, by2 = bbox  # [xmin, ymin, xmax, ymax]
-            bbox_w = bx2 - bx1
-            bbox_h = by2 - by1
-            bbox_cx = (bx1 + bx2) / 2   # 横方向の中心
-            bbox_top_y = by1            # 上端の y（ここに帽子の底を合わせたい）
+            # bx1, by1, bx2, by2 = bbox  # [xmin, ymin, xmax, ymax]
+            # bbox_w = bx2 - bx1
+            # bbox_h = by2 - by1
+            # bbox_cx = (bx1 + bx2) / 2   # 横方向の中心
+            # bbox_top_y = by1            # 上端の y（ここに帽子の底を合わせたい）
             
-            width_factor = 1.7         # 1.1 とかにすると少し大きくできる
-            needed_width_px = bbox_w * width_factor
-            aspect = stamp_h / stamp_w
-            hat_h_scaled = needed_width_px * aspect
+            # width_factor = 1.7         # 1.1 とかにすると少し大きくできる
+            # needed_width_px = bbox_w * width_factor
+            # aspect = stamp_h / stamp_w
+            # hat_h_scaled = needed_width_px * aspect
 
-            if nose["x"] > face_cx: # 右向き
-                OFFSET_X = 0
-                x_left = bbox_cx - needed_width_px / 2
-            else: # 左向き
-                OFFSET_X = 0
-                x_left = bbox_cx - needed_width_px / 2
-            y_top = bbox_top_y - hat_h_scaled * 1.1
+            # if nose["x"] > face_cx: # 右向き
+            #     OFFSET_X = 0
+            #     x_left = bbox_cx - needed_width_px / 2
+            # else: # 左向き
+            #     OFFSET_X = 0
+            #     x_left = bbox_cx - needed_width_px / 2
+            # y_top = bbox_top_y - hat_h_scaled * 1.1
+            raise HTTPException(status_code=400, detail="横顔には対応していません")
 
         elif stamp_type == "mimi":
-            bx1, by1, bx2, by2 = bbox  # [xmin, ymin, xmax, ymax]
-            bbox_w = bx2 - bx1
-            bbox_h = by2 - by1
-            bbox_cx = (bx1 + bx2) / 2   # 横方向の中心
-            bbox_top_y = by1            # 上端の y（ここに帽子の底を合わせたい）
+            # bx1, by1, bx2, by2 = bbox  # [xmin, ymin, xmax, ymax]
+            # bbox_w = bx2 - bx1
+            # bbox_h = by2 - by1
+            # bbox_cx = (bx1 + bx2) / 2   # 横方向の中心
+            # bbox_top_y = by1            # 上端の y（ここに帽子の底を合わせたい）
             
-            width_factor = 1.7         # 1.1 とかにすると少し大きくできる
-            needed_width_px = bbox_w * width_factor
-            aspect = stamp_h / stamp_w
-            mimi_h_scaled = needed_width_px * aspect
+            # width_factor = 1.7         # 1.1 とかにすると少し大きくできる
+            # needed_width_px = bbox_w * width_factor
+            # aspect = stamp_h / stamp_w
+            # mimi_h_scaled = needed_width_px * aspect
 
-            if nose["x"] > face_cx: # 右向き
-                OFFSET_X = 0
-                x_left = bbox_cx - needed_width_px / 2
-            else: # 左向き
-                OFFSET_X = 0
-                x_left = bbox_cx - needed_width_px / 2
-            y_top = bbox_top_y - mimi_h_scaled * 0.8
+            # if nose["x"] > face_cx: # 右向き
+            #     OFFSET_X = 0
+            #     x_left = bbox_cx - needed_width_px / 2
+            # else: # 左向き
+            #     OFFSET_X = 0
+            #     x_left = bbox_cx - needed_width_px / 2
+            # y_top = bbox_top_y - mimi_h_scaled * 0.8
+            raise HTTPException(status_code=400, detail="横顔には対応していません")
 
         # ⑥ 鼻の飾り
         elif stamp_type == "hana":
@@ -565,50 +567,29 @@ async def get_stamp_info(data: StampRequestData):
                 x_left = center_x - needed_width_px / 2 - offset_x
             offset_y = face_h * 0.1
             y_top  = center_y - mouth_h_scaled / 2 + offset_y
-
-        elif stamp_type == "kubi":
-            # bbox 底辺の中点を求める
-            bx1, by1, bx2, by2 = bbox
-            bbox_w = bx2 - bx1
-            center_bottom_x = (bx1 + bx2) / 2 
-            bottom_y = by2
-
-            # 1. 0と1点から bbox の横幅はすでに bbox_w で計算済み
-            # 2. bboxの横幅に合わせてスタンプ画像をスケーリング
-            width_factor = 1.0    # 顔幅のどれくらいにするか（0.4〜0.6で微調整）
-            needed_width_px = bbox_w * width_factor
-
-            # 3. スケーリングした画像の高さを取得
-            aspect = stamp_h / stamp_w
-            ribbon_h_scaled = needed_width_px * aspect
-
-            if nose["x"] > face_cx: # 右向き
-                x_left = bx1
-            else: # 左向き
-                x_left = bx2
-            y_top  = bottom_y
         
         elif stamp_type == "kubi":
-            # bbox 底辺の中点を求める
-            bx1, by1, bx2, by2 = bbox
-            bbox_w = bx2 - bx1
-            center_bottom_x = (bx1 + bx2) / 2 
-            bottom_y = by2
+            # # bbox 底辺の中点を求める
+            # bx1, by1, bx2, by2 = bbox
+            # bbox_w = bx2 - bx1
+            # center_bottom_x = (bx1 + bx2) / 2 
+            # bottom_y = by2
 
-            # 1. 0と1点から bbox の横幅はすでに bbox_w で計算済み
-            # 2. bboxの横幅に合わせてスタンプ画像をスケーリング
-            width_factor = 1.0    # 顔幅のどれくらいにするか（0.4〜0.6で微調整）
-            needed_width_px = bbox_w * width_factor
+            # # 1. 0と1点から bbox の横幅はすでに bbox_w で計算済み
+            # # 2. bboxの横幅に合わせてスタンプ画像をスケーリング
+            # width_factor = 1.0    # 顔幅のどれくらいにするか（0.4〜0.6で微調整）
+            # needed_width_px = bbox_w * width_factor
 
-            # 3. スケーリングした画像の高さを取得
-            aspect = stamp_h / stamp_w
-            ribbon_h_scaled = needed_width_px * aspect
+            # # 3. スケーリングした画像の高さを取得
+            # aspect = stamp_h / stamp_w
+            # ribbon_h_scaled = needed_width_px * aspect
 
-            if nose["x"] > face_cx: # 右向き
-                x_left = bx1
-            else: # 左向き
-                x_left = bx2
-            y_top  = bottom_y
+            # if nose["x"] > face_cx: # 右向き
+            #     x_left = bx1
+            # else: # 左向き
+            #     x_left = bx2
+            # y_top  = bottom_y
+            raise HTTPException(status_code=400, detail="横顔には対応していません")
         
         elif stamp_type == "kira":
             original_image_path = os.path.join(
