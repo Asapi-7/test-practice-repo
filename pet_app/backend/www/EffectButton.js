@@ -15,17 +15,16 @@ function opensub(name){
     newsubBox.style.display = "flex";
     activesubBox = newsubBox;
 }
-
-function hideallsubs() {
-    const all = document.getElementsByClassName("subButtons");
-    for (let sub of all) {
-        sub.style.display = "none";
-    }
-}
+//hideallsubs()は一旦コメントで残す。
+//function hideallsubs() {
+    //const all = document.getElementsByClassName("subButtons");
+    //for (let sub of all) {
+        //sub.style.display = "none";
+    //}
+//}
 
 function applyeffect(effectName){
     console.log("エフェクト：",effectName);
     handleClick(effectName);
-    hideallsubs();
     activesubBox = null;
 }
