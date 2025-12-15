@@ -47,8 +47,9 @@ async function EffectSelect(effectName){
     const ImageSpace = document.getElementById('ImageSpace');   //描画領域となるcanvasを指定
     const context = ImageSpace.getContext('2d');                //2D描画用のコンテキストを取得
     const effectImg = new Image();
-    effectImg.src = result["stamp_image"];                     //エフェクト画像の読み込み開始
+    //effectImg.src = result["stamp_image"];                     //エフェクト画像の読み込み開始
     //変更したよ
+    await new Promise((resolve, reject) => {
     effectImg.onload = () => {                                  // 読み込み完了後、バックエンドの指示通りに画像を描画
     // 元画像 → キャンバスの拡大率（ImageImport.js で保存した値）
     const baseScale = UserImageScale;
@@ -127,14 +128,22 @@ async function EffectSelect(effectName){
         // 描画設定を元に戻す
         context.restore();
         // 角度計算用ここまで（高井良）
-    }
+        resolve();
+    };
+    effectImg.onerror = () => {
+        console.error("画像の読み込みに失敗しました");
+        resolve(); // loading が永遠に消えないのを防ぐ
+    };
+
+    effectImg.src = result["stamp_image"];
+    });
 }
 
 // ★これを一番下に追加！
-function handleClick(effectName){
-    console.log("handleClick:", effectName);
-    EffectSelect(effectName);
-}
+//function handleClick(effectName){
+    //console.log("handleClick:", effectName);
+    //EffectSelect(effectName);
+//}
 
 //UserImageScaleが加工する画像の倍率です
 //strage: ID, OnEffect, UserImageScale, Img

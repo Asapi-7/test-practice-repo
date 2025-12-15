@@ -23,7 +23,7 @@ async function EffectRemove(effectName){
     const context = ImageSpace.getContext('2d');                //2D描画用のコンテキストを取得
     const Img = new Image();
     Img.src = JSON.parse(sessionStorage.getItem("Img"));        //画像読み込み開始
-
+    await new Promise((resolve) => {
     Img.onload = async () => {                                        //画像読み込み終わった後の処理
         context.clearRect(0,0,ImageSpace.clientWidth,ImageSpace.clientHeight);  //一回全消し
         if(Img.width <= Img.height){                                            //元画像描画し直し
@@ -38,7 +38,11 @@ async function EffectRemove(effectName){
         for(let i=0; i<RegenerateEffect.length; i++){                         //再度エフェクトを描画し直す
             await EffectSelect(RegenerateEffect[i]);
         }
-    }
+    
+        resolve();
+      
+      };
+    });
 }
 
 //strage: ID, OnEffect, UserImageScale, Img, AnotherImg
